@@ -1,5 +1,8 @@
 export default function Login() {
-    return (
-        <h1>Productos</h1>
-    );
+  return (
+    <>
+      <h2 className="text-3xl font-bold">Login</h2>
+      <p className="mt-4">Módulo en construcción.</p>
+    </>
+  );
 }

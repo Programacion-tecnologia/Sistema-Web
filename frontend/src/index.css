@@ -1,5 +1,46 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: "Segoe UI", ui-sans-serif, system-ui, -apple-system, Roboto,
+    Helvetica, Arial, sans-serif;
+
+  /* Azul — marca, acciones primarias, navegación activa */
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-400: #60a5fa;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-primary-800: #1e40af;
+  --color-primary-900: #1e3a8a;
+
+  /* Verde — éxito, aprobado, en stock */
+  --color-success-50: #f0fdf4;
+  --color-success-100: #dcfce7;
+  --color-success-500: #22c55e;
+  --color-success-600: #16a34a;
+  --color-success-700: #15803d;
+
+  /* Amarillo — advertencia, pendiente, stock bajo */
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+
+  /* Rojo — error, rechazado, sin stock */
+  --color-danger-50: #fef2f2;
+  --color-danger-100: #fee2e2;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+
+  /* Fondo general de la app */
+  --color-surface: #f5f7fa;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -13,6 +54,15 @@ body,
 }
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
-  background-color: #f5f7fa;
+  font-family: var(--font-sans);
+  background-color: var(--color-surface);
+}
+
+@layer base {
+  h1,
+  h2,
+  h3 {
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
 }
