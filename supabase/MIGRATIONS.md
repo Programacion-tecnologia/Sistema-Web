@@ -1,0 +1,8 @@
+# Migraciones aplicadas
+
+Registro manual de qué migraciones ya se corrieron en el proyecto real de Supabase (rios-system SQL Editor). Actualizar esta lista cada vez que se escriba y corra una migración nueva — evita no saber si una ya se aplicó o no.
+
+- [x] `0001_init.sql` — esquema inicial: `profiles`, `categorias`, `productos`, `clientes`, `proveedores`, `cotizaciones`, `cotizacion_items`, `auditoria` + RLS.
+- [x] `0002_productos_variantes_fotos.sql` — columnas `color`/`modelo`/`foto_url` en `productos` + bucket de Storage `productos` (público) con políticas de lectura pública / escritura autenticada.
+- [x] `0003_productos_moneda_referencia.sql` — columnas `moneda` (PEN/USD, default PEN), `tipo_cambio` y `codigo_referencia` (único, independiente de `codigo_barras`) en `productos`.
+- [x] `0004_cotizaciones_vencimiento.sql` — columna `vence_en` (trigger `before insert`, 48h desde `created_at`) en `cotizaciones` + función `expirar_cotizaciones_vencidas()` + cron job `pg_cron` cada 15 min que libera stock reservado y cancela cotizaciones sin aprobar vencidas.
