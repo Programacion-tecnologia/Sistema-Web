@@ -1,7 +1,10 @@
 import { supabase } from "./supabaseClient";
 
+// vendedor: profiles!vendedor_id especifica cual de las tres FK de cotizaciones
+// hacia profiles (vendedor_id, aprobada_por, verificada_por) usar en el embed;
+// sin el hint, PostgREST no puede elegir sola y devuelve error de ambiguedad.
 const COTIZACION_SELECT =
-  "*, cliente:clientes(id, nombre), vendedor:profiles(id, nombre), items:cotizacion_items(id, cantidad, precio_unitario, producto:productos(id, nombre, precio_venta, moneda, stock_disponible))";
+  "*, cliente:clientes(id, nombre), vendedor:profiles!vendedor_id(id, nombre), items:cotizacion_items(id, cantidad, precio_unitario, producto:productos(id, nombre, precio_venta, moneda, stock_disponible))";
 
 export async function listCotizaciones() {
   const { data, error } = await supabase

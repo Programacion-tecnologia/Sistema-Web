@@ -22,6 +22,10 @@ import NotFound from "./pages/NotFound/NotFound";
 // propio chunk para no engordar el bundle inicial que descarga todo el mundo.
 const ProductosImportar = lazy(() => import("./pages/Productos/ProductosImportar"));
 
+// jsPDF y html5-qrcode son pesados y solo hacen falta en esta pantalla: mismo
+// motivo de code-splitting que ProductosImportar.
+const ScannerVerificacion = lazy(() => import("./pages/Scanner/ScannerVerificacion"));
+
 function App() {
   return (
     <BrowserRouter>
@@ -51,6 +55,14 @@ function App() {
             <Route path="cotizaciones/nuevo" element={<CotizacionDetalle />} />
             <Route path="cotizaciones/:id" element={<CotizacionDetalle />} />
             <Route path="scanner" element={<Scanner />} />
+            <Route
+              path="scanner/:id"
+              element={
+                <Suspense fallback={<p className="text-sm text-slate-500">Cargando...</p>}>
+                  <ScannerVerificacion />
+                </Suspense>
+              }
+            />
             <Route path="reportes" element={<Reportes />} />
             <Route path="configuracion" element={<Configuracion />} />
             <Route path="*" element={<NotFound />} />
