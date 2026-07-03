@@ -11,6 +11,7 @@ import Ventas from "./pages/Ventas/Ventas";
 import Clientes from "./pages/Clientes/Clientes";
 import Proveedores from "./pages/Proveedores/Proveedores";
 import Cotizaciones from "./pages/Cotizaciones/Cotizaciones";
+import CotizacionDetalle from "./pages/Cotizaciones/CotizacionDetalle";
 import Scanner from "./pages/Scanner/Scanner";
 import Reportes from "./pages/Reportes/Reportes";
 import Configuracion from "./pages/Configuracion/Configuracion";
@@ -47,6 +48,8 @@ function App() {
             <Route path="clientes" element={<Clientes />} />
             <Route path="proveedores" element={<Proveedores />} />
             <Route path="cotizaciones" element={<Cotizaciones />} />
+            <Route path="cotizaciones/nuevo" element={<CotizacionDetalle />} />
+            <Route path="cotizaciones/:id" element={<CotizacionDetalle />} />
             <Route path="scanner" element={<Scanner />} />
             <Route path="reportes" element={<Reportes />} />
             <Route path="configuracion" element={<Configuracion />} />

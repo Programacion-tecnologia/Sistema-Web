@@ -5,15 +5,7 @@ import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
 import FotoProducto from "../../components/Productos/FotoProducto";
 import { getNivelStock, STOCK_NIVEL_CLASS } from "../../utils/stock";
-
-const formatters = {
-  PEN: new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" }),
-  USD: new Intl.NumberFormat("es-PE", { style: "currency", currency: "USD" }),
-};
-
-function formatearPrecio(valor, moneda) {
-  return (formatters[moneda] ?? formatters.PEN).format(valor);
-}
+import { formatearPrecio } from "../../utils/currency";
 
 export default function Productos() {
   const navigate = useNavigate();
