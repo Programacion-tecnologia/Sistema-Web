@@ -154,6 +154,10 @@ export default function ScannerVerificacion() {
       <Card className="mt-6 max-w-2xl">
         {!confirmado && (
           <div className="mb-4">
+            <p className="text-xs text-slate-500 mb-2">
+              Escaneá con el lector físico, escribí el código manualmente y presioná Enter, o usá
+              la cámara del celular con el botón de al lado.
+            </p>
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex-1 min-w-[200px]">
                 <EscanerInput onScan={registrarEscaneo} disabled={camaraActiva} />
@@ -188,7 +192,15 @@ export default function ScannerVerificacion() {
               const estado = getEstadoLinea(linea.cantidad_escaneada, linea.cantidad_pedida);
               return (
                 <tr key={linea.producto_id} className={ESTADO_LINEA_ROW_CLASS[estado]}>
-                  <td className="py-2">{linea.nombre}</td>
+                  <td className="py-2">
+                    <p className="font-medium text-slate-800">{linea.nombre}</p>
+                    {linea.codigo_referencia && (
+                      <p className="text-xs text-slate-400">CÓDIGO REF: {linea.codigo_referencia}</p>
+                    )}
+                    {linea.codigo_barras && (
+                      <p className="text-xs text-slate-400">CÓDIGO BARRAS: {linea.codigo_barras}</p>
+                    )}
+                  </td>
                   <td className="py-2 text-right">
                     {linea.cantidad_escaneada} / {linea.cantidad_pedida}
                   </td>

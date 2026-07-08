@@ -1,7 +1,12 @@
 import { NavLink } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
+import { ROLES } from "../../utils/roles";
 
+// "roles" ausente = visible para cualquier rol logueado. Solo se restringen
+// los modulos donde eso realmente importa hoy (Scanner, Usuarios) - los
+// modulos todavia placeholder (Compras/Ventas/Proveedores/Reportes/etc.) no
+// tienen todavia una razon de negocio concreta para ocultarse por rol.
 const MENU = [
-
     { path: "/", label: "Dashboard", end: true },
     { path: "/inventario", label: "Inventario" },
     { path: "/productos", label: "Productos" },
@@ -10,13 +15,16 @@ const MENU = [
     { path: "/clientes", label: "Clientes" },
     { path: "/proveedores", label: "Proveedores" },
     { path: "/cotizaciones", label: "Cotizaciones" },
-    { path: "/scanner", label: "Scanner" },
+    { path: "/scanner", label: "Scanner", roles: [ROLES.ALMACEN, ROLES.GERENCIA, ROLES.ADMIN] },
     { path: "/reportes", label: "Reportes" },
+    { path: "/usuarios", label: "Usuarios", roles: [ROLES.ADMIN] },
     { path: "/configuracion", label: "Configuración" },
 
 ];
 
 export default function Sidebar() {
+    const { rol } = useAuth();
+    const menuVisible = MENU.filter((item) => !item.roles || item.roles.includes(rol));
 
     return (
 
@@ -36,7 +44,7 @@ export default function Sidebar() {
 
                 {
 
-                    MENU.map((item) => (
+                    menuVisible.map((item) => (
 
                         <NavLink
 

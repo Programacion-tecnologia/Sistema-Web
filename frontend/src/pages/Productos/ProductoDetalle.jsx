@@ -8,9 +8,13 @@ import {
 import { findOrCreateCategoria, listCategorias } from "../../services/categoriasService";
 import { uploadProductoFoto } from "../../services/storageService";
 import { obtenerTipoCambioReferencial } from "../../services/tipoCambioService";
+import { useAuth } from "../../hooks/useAuth";
+import { ROLES } from "../../utils/roles";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
 import FotoProducto from "../../components/Productos/FotoProducto";
+
+const PUEDE_ESCRIBIR_PRODUCTOS = [ROLES.ADMIN, ROLES.GERENCIA];
 
 const INPUT_CLASS =
   "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500";
@@ -34,6 +38,8 @@ const FORM_INICIAL = {
 export default function ProductoDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { rol } = useAuth();
+  const puedeEscribir = PUEDE_ESCRIBIR_PRODUCTOS.includes(rol);
   const modoEdicion = Boolean(id);
 
   const [productoId, setProductoId] = useState(id ?? null);
@@ -66,7 +72,7 @@ export default function ProductoDetalle() {
     if (!modoEdicion) return;
 
     let activo = true;
-    getProducto(id)
+    getProducto(id, rol)
       .then((producto) => {
         if (!activo) return;
         setForm({
@@ -93,7 +99,7 @@ export default function ProductoDetalle() {
     return () => {
       activo = false;
     };
-  }, [id, modoEdicion]);
+  }, [id, modoEdicion, rol]);
 
   const handleChange = (campo) => (event) => {
     setForm((prev) => ({ ...prev, [campo]: event.target.value }));
@@ -175,11 +181,14 @@ export default function ProductoDetalle() {
 
   return (
     <>
-      <h2 className="text-3xl font-bold">{modoEdicion ? "Editar producto" : "Nuevo producto"}</h2>
+      <h2 className="text-3xl font-bold">
+        {modoEdicion ? (puedeEscribir ? "Editar producto" : "Producto") : "Nuevo producto"}
+      </h2>
 
       <div className="mt-6 flex flex-col lg:flex-row gap-6 items-start">
         <Card className="w-full lg:max-w-2xl">
           <form onSubmit={handleSubmit} className="space-y-4">
+            <fieldset disabled={!puedeEscribir} className="contents">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
@@ -292,19 +301,21 @@ export default function ProductoDetalle() {
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Precio de compra
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={form.precio_compra}
-                  onChange={handleChange("precio_compra")}
-                  className={INPUT_CLASS}
-                />
-              </div>
+              {puedeEscribir && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Precio de compra
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={form.precio_compra}
+                    onChange={handleChange("precio_compra")}
+                    className={INPUT_CLASS}
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -342,21 +353,24 @@ export default function ProductoDetalle() {
                 />
               </div>
             </div>
+            </fieldset>
 
             {error && <p className="text-sm text-danger-600">{error}</p>}
             {mensaje && <p className="text-sm text-success-600">{mensaje}</p>}
 
             <div className="flex items-center gap-3">
-              <Button type="submit" disabled={saving}>
-                {saving ? "Guardando..." : "Guardar"}
-              </Button>
+              {puedeEscribir && (
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Guardando..." : "Guardar"}
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="secondary"
                 disabled={saving}
                 onClick={() => navigate("/productos")}
               >
-                Cancelar
+                {puedeEscribir ? "Cancelar" : "Volver"}
               </Button>
             </div>
           </form>
@@ -366,7 +380,7 @@ export default function ProductoDetalle() {
           <p className="text-sm font-medium text-slate-700 mb-3">Foto del producto</p>
           <FotoProducto fotoUrl={fotoUrl} nombre={form.nombre} size="lg" className="mx-auto" />
 
-          {productoId ? (
+          {puedeEscribir && productoId && (
             <label className="mt-4 block">
               <span className="sr-only">Subir foto</span>
               <input
@@ -377,7 +391,8 @@ export default function ProductoDetalle() {
                 className="text-sm"
               />
             </label>
-          ) : (
+          )}
+          {puedeEscribir && !productoId && (
             <p className="mt-4 text-xs text-slate-400">
               Guarda el producto primero para poder subirle una foto.
             </p>

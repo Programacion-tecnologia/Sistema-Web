@@ -1,24 +1,41 @@
 import { supabase } from "./supabaseClient";
 import { findOrCreateCategoria } from "./categoriasService";
 import { uploadProductoFoto } from "./storageService";
+import { ROLES } from "../utils/roles";
 
-const PRODUCTO_SELECT = "*, categoria:categorias(id, nombre)";
+// precio_compra no se puede ocultar por rol a nivel de RLS (es por fila
+// completa, no por columna, y todos los usuarios autenticados comparten el
+// mismo rol de base de datos) - se excluye aca, en el select mismo, para que
+// ni siquiera llegue al navegador si el rol no corresponde. Documentado como
+// proteccion de UX, no como blindaje de base de datos: un usuario tecnico
+// con su propio token podria pedir la columna igual vía la API REST directa.
+const COLUMNAS_BASE =
+  "id, codigo_barras, codigo_referencia, nombre, descripcion, categoria_id, precio_venta, stock_fisico, stock_reservado, stock_disponible, ubicacion, estado, color, modelo, foto_url, moneda, tipo_cambio, created_by, created_at, updated_at";
+
+const PRODUCTO_SELECT_COMPLETO = `${COLUMNAS_BASE}, precio_compra, categoria:categorias(id, nombre)`;
+
+function construirProductoSelect(rol) {
+  const puedeVerCosto = rol === ROLES.ADMIN || rol === ROLES.GERENCIA;
+  const columnas = puedeVerCosto ? `${COLUMNAS_BASE}, precio_compra` : COLUMNAS_BASE;
+  return `${columnas}, categoria:categorias(id, nombre)`;
+}
+
 const UPLOAD_CONCURRENCY = 5;
 
-export async function listProductos() {
+export async function listProductos(rol) {
   const { data, error } = await supabase
     .from("productos")
-    .select(PRODUCTO_SELECT)
+    .select(construirProductoSelect(rol))
     .order("nombre");
 
   if (error) throw error;
   return data;
 }
 
-export async function getProducto(id) {
+export async function getProducto(id, rol) {
   const { data, error } = await supabase
     .from("productos")
-    .select(PRODUCTO_SELECT)
+    .select(construirProductoSelect(rol))
     .eq("id", id)
     .single();
 
@@ -26,11 +43,13 @@ export async function getProducto(id) {
   return data;
 }
 
+// create/update solo los puede llamar admin/gerencia (RLS + rutas protegidas
+// en el frontend), asi que siempre devuelven todas las columnas.
 export async function createProducto(payload) {
   const { data, error } = await supabase
     .from("productos")
     .insert(payload)
-    .select(PRODUCTO_SELECT)
+    .select(PRODUCTO_SELECT_COMPLETO)
     .single();
 
   if (error) throw error;
@@ -42,7 +61,7 @@ export async function updateProducto(id, payload) {
     .from("productos")
     .update(payload)
     .eq("id", id)
-    .select(PRODUCTO_SELECT)
+    .select(PRODUCTO_SELECT_COMPLETO)
     .single();
 
   if (error) throw error;

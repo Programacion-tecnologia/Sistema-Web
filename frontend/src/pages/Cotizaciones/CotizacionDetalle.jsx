@@ -4,6 +4,7 @@ import {
   aprobarCotizacion,
   cancelarCotizacion,
   createCotizacion,
+  despacharCotizacion,
   enviarCotizacion,
   getCotizacion,
   rechazarCotizacion,
@@ -16,14 +17,20 @@ import Button from "../../components/Button/Button";
 import { ESTADO_LABEL, ESTADO_BADGE_CLASS } from "../../utils/cotizacionEstado";
 import { formatearPrecio } from "../../utils/currency";
 import { getNivelStock, STOCK_NIVEL_CLASS } from "../../utils/stock";
+import { generarPdfCotizacion } from "../../utils/pdfCotizacion";
+import { ROLES } from "../../utils/roles";
 
 const INPUT_CLASS =
   "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500";
 
+const PUEDE_ENVIAR_CANCELAR = [ROLES.VENTAS, ROLES.ADMIN, ROLES.GERENCIA];
+const PUEDE_APROBAR_RECHAZAR = [ROLES.ADMIN, ROLES.GERENCIA];
+const PUEDE_DESPACHAR = [ROLES.ADMIN, ROLES.GERENCIA];
+
 export default function CotizacionDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, rol } = useAuth();
   const modoEdicion = Boolean(id);
 
   const [cotizacion, setCotizacion] = useState(null);
@@ -145,6 +152,14 @@ export default function CotizacionDetalle() {
     }
   };
 
+  const handleDescargarPdf = (total) => {
+    try {
+      generarPdfCotizacion({ cotizacion, total });
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const ejecutarAccion = async (accion) => {
     setActionLoading(true);
     setError(null);
@@ -218,7 +233,13 @@ export default function CotizacionDetalle() {
           {error && <p className="text-sm text-danger-600 mb-4">{error}</p>}
 
           <div className="flex items-center gap-3 flex-wrap">
-            {cotizacion.estado === "borrador" && (
+            {["borrador", "enviada"].includes(cotizacion.estado) && (
+              <Button variant="secondary" onClick={() => handleDescargarPdf(totalActual)}>
+                Descargar cotización (PDF)
+              </Button>
+            )}
+
+            {cotizacion.estado === "borrador" && PUEDE_ENVIAR_CANCELAR.includes(rol) && (
               <>
                 <Button disabled={actionLoading} onClick={() => ejecutarAccion(enviarCotizacion)}>
                   Enviar
@@ -233,7 +254,7 @@ export default function CotizacionDetalle() {
               </>
             )}
 
-            {cotizacion.estado === "enviada" && (
+            {cotizacion.estado === "enviada" && PUEDE_APROBAR_RECHAZAR.includes(rol) && (
               <>
                 <Button
                   variant="success"
@@ -250,6 +271,16 @@ export default function CotizacionDetalle() {
                   Rechazar
                 </Button>
               </>
+            )}
+
+            {cotizacion.estado === "lista_despacho" && PUEDE_DESPACHAR.includes(rol) && (
+              <Button
+                variant="success"
+                disabled={actionLoading}
+                onClick={() => ejecutarAccion(despacharCotizacion)}
+              >
+                Despachado y enviado
+              </Button>
             )}
 
             <Button variant="secondary" onClick={() => navigate("/cotizaciones")}>

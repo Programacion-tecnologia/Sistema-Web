@@ -1,14 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { listProductos } from "../../services/productosService";
+import { useAuth } from "../../hooks/useAuth";
+import { ROLES } from "../../utils/roles";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
 import FotoProducto from "../../components/Productos/FotoProducto";
 import { getNivelStock, STOCK_NIVEL_CLASS } from "../../utils/stock";
 import { formatearPrecio } from "../../utils/currency";
 
+const PUEDE_ESCRIBIR_PRODUCTOS = [ROLES.ADMIN, ROLES.GERENCIA];
+
 export default function Productos() {
   const navigate = useNavigate();
+  const { rol } = useAuth();
+  const puedeEscribir = PUEDE_ESCRIBIR_PRODUCTOS.includes(rol);
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -17,7 +23,7 @@ export default function Productos() {
   useEffect(() => {
     let activo = true;
 
-    listProductos()
+    listProductos(rol)
       .then((data) => {
         if (activo) setProductos(data);
       })
@@ -31,7 +37,7 @@ export default function Productos() {
     return () => {
       activo = false;
     };
-  }, []);
+  }, [rol]);
 
   const productosFiltrados = useMemo(() => {
     const termino = busqueda.trim().toLowerCase();
@@ -44,14 +50,16 @@ export default function Productos() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <h2 className="text-3xl font-bold">Productos</h2>
 
-        <div className="flex items-center gap-3">
-          <Link to="/productos/importar">
-            <Button variant="secondary">Importar desde Excel</Button>
-          </Link>
-          <Link to="/productos/nuevo">
-            <Button>Nuevo producto</Button>
-          </Link>
-        </div>
+        {puedeEscribir && (
+          <div className="flex items-center gap-3">
+            <Link to="/productos/importar">
+              <Button variant="secondary">Importar desde Excel</Button>
+            </Link>
+            <Link to="/productos/nuevo">
+              <Button>Nuevo producto</Button>
+            </Link>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 max-w-sm">
@@ -97,7 +105,7 @@ export default function Productos() {
                 >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <FotoProducto fotoUrl={producto.foto_url} nombre={producto.nombre} size="sm" />
+                      <FotoProducto fotoUrl={producto.foto_url} nombre={producto.nombre} size="md" />
                       <div>
                         <p className="font-medium text-slate-800">{producto.nombre}</p>
                         {producto.codigo_referencia && (
@@ -123,7 +131,7 @@ export default function Productos() {
                   <td className="px-4 py-3 text-right" onClick={(event) => event.stopPropagation()}>
                     <Link to={`/productos/${producto.id}`}>
                       <Button variant="secondary" size="sm">
-                        Editar
+                        {puedeEscribir ? "Editar" : "Ver"}
                       </Button>
                     </Link>
                   </td>

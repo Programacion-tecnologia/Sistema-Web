@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { listCotizaciones } from "../../services/cotizacionesService";
+import { useAuth } from "../../hooks/useAuth";
+import { ROLES } from "../../utils/roles";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
 import { ESTADO_LABEL, ESTADO_BADGE_CLASS } from "../../utils/cotizacionEstado";
 import { formatearPrecio } from "../../utils/currency";
+
+const PUEDE_CREAR_COTIZACION = [ROLES.VENTAS, ROLES.ADMIN, ROLES.GERENCIA];
 
 function calcularTotal(items) {
   return items.reduce((total, item) => total + item.cantidad * item.precio_unitario, 0);
@@ -19,6 +23,8 @@ function vencimientoLabel(cotizacion) {
 
 export default function Cotizaciones() {
   const navigate = useNavigate();
+  const { rol } = useAuth();
+  const puedeCrear = PUEDE_CREAR_COTIZACION.includes(rol);
   const [cotizaciones, setCotizaciones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -56,9 +62,16 @@ export default function Cotizaciones() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <h2 className="text-3xl font-bold">Cotizaciones</h2>
 
-        <Link to="/cotizaciones/nuevo">
-          <Button>Nueva cotización</Button>
-        </Link>
+        {puedeCrear && (
+          <div className="flex items-center gap-3">
+            <Link to="/cotizaciones/importar">
+              <Button variant="secondary">Agregar cotización manualmente</Button>
+            </Link>
+            <Link to="/cotizaciones/nuevo">
+              <Button>Nueva cotización</Button>
+            </Link>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 max-w-sm">
