@@ -12,3 +12,4 @@ Registro manual de qué migraciones ya se corrieron en el proyecto real de Supab
 - [x] `0008_roles_admin_inicial.sql` — fija `onemillion0112@gmail.com` como `admin` + función helper `mi_rol()` (módulo Usuarios/Roles). Correr primero, antes que 0009/0010.
 - [x] `0009_rls_por_rol.sql` — reemplaza las policies permisivas de `0001_init.sql` por RLS real según rol en `categorias`, `productos`, `clientes`, `cotizaciones`, `cotizacion_items`, `auditoria`; agrega trigger de protección de `rol` en `profiles` + RPC `cambiar_rol_usuario()`.
 - [x] `0010_roles_en_rpcs_existentes.sql` — agrega chequeo de `mi_rol()` a `aprobar_cotizacion()` (admin/gerencia) y `verificar_despacho_cotizacion()` (almacen/admin).
+- [x] `0011_productos_eliminar_solo_admin.sql` — restringe el borrado de `productos` a solo Admin (antes admin/gerencia); botón "Eliminar" nuevo en el módulo Productos.

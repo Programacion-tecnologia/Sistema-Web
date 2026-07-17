@@ -28,7 +28,7 @@ export function AuthProvider({ children }) {
 
     let activo = true;
 
-    const cargarPerfil = session.user
+    const cargarPerfil = session?.user
       ? supabase
           .from("profiles")
           .select("nombre, rol")

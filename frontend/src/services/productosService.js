@@ -22,6 +22,43 @@ function construirProductoSelect(rol) {
 
 const UPLOAD_CONCURRENCY = 5;
 
+// Tamanos de lote para que una importacion grande (miles de filas) no falle
+// ni se cuelgue:
+// - LOTE_CONSULTA: los .in(...) para detectar productos existentes van en la
+//   URL de la consulta - con miles de codigos esa URL puede superar el
+//   limite de longitud del gateway y fallar directo, no solo tardar.
+// - LOTE_INSERCION: evita un unico insert gigante en una sola request.
+// - CONCURRENCIA_ACTUALIZACION: las actualizaciones (productos que ya
+//   existen) no se pueden agrupar en un solo statement (cada fila tiene
+//   valores distintos), pero se pueden paralelizar en tandas chicas en vez
+//   de una request a la vez - antes, reimportar miles de productos ya
+//   existentes tardaba minutos por ser 100% secuencial.
+const LOTE_CONSULTA = 200;
+const LOTE_INSERCION = 500;
+const CONCURRENCIA_ACTUALIZACION = 8;
+
+function dividirEnLotes(array, tamano) {
+  const lotes = [];
+  for (let i = 0; i < array.length; i += tamano) {
+    lotes.push(array.slice(i, i + tamano));
+  }
+  return lotes;
+}
+
+async function buscarExistentesPorColumna(columna, valores) {
+  const mapa = new Map();
+
+  for (const lote of dividirEnLotes(valores, LOTE_CONSULTA)) {
+    const { data, error } = await supabase.from("productos").select(`id, ${columna}`).in(columna, lote);
+    if (error) throw error;
+    for (const fila of data) {
+      mapa.set(fila[columna], fila.id);
+    }
+  }
+
+  return mapa;
+}
+
 export async function listProductos(rol) {
   const { data, error } = await supabase
     .from("productos")
@@ -30,6 +67,88 @@ export async function listProductos(rol) {
 
   if (error) throw error;
   return data;
+}
+
+// --- Listado paginado de Productos (busqueda server-side) ---------------
+//
+// A diferencia de listProductos() de arriba (usado por el selector de
+// Cotizaciones y el Dashboard, que si necesitan el catalogo completo), la
+// pantalla de Productos pagina: nunca baja mas de PRODUCTOS_PAGE_SIZE filas
+// completas por pedido.
+
+export const PRODUCTOS_PAGE_SIZE = 30;
+
+// Escapa los caracteres especiales de ILIKE (%, _) para que se busquen tal
+// cual si aparecen en el termino (los codigos de referencia usan "_" como
+// separador real, no como wildcard), y envuelve el patron entre comillas
+// para que .or() no se rompa si el termino trae una coma.
+function construirPatronIlike(termino) {
+  const escapado = termino.replace(/[\\%_]/g, (c) => `\\${c}`).replace(/"/g, '\\"');
+  return `"%${escapado}%"`;
+}
+
+export async function buscarProductosPaginado({ rol, pagina, termino = "", marcaId = "", ids = null }) {
+  // ids: lista de ids a la que restringir (ej. filtro de Modelo, resuelto en
+  // el cliente contra listModelosProductos()). null = sin restriccion.
+  if (ids !== null && ids.length === 0) {
+    return { data: [], count: 0 };
+  }
+
+  let consulta = supabase
+    .from("productos")
+    .select(construirProductoSelect(rol), { count: "exact" })
+    .order("nombre");
+
+  const terminoLimpio = termino.trim();
+  if (terminoLimpio) {
+    const patron = construirPatronIlike(terminoLimpio);
+    consulta = consulta.or(`nombre.ilike.${patron},codigo_referencia.ilike.${patron}`);
+  }
+  if (marcaId) {
+    consulta = consulta.eq("categoria_id", marcaId);
+  }
+  if (ids !== null) {
+    consulta = consulta.in("id", ids);
+  }
+
+  const desde = pagina * PRODUCTOS_PAGE_SIZE;
+  const { data, error, count } = await consulta.range(desde, desde + PRODUCTOS_PAGE_SIZE - 1);
+
+  if (error) throw error;
+  return { data, count: count ?? 0 };
+}
+
+// Fetch liviano (solo id + modelo) para armar el dropdown de "Modelo" y para
+// resolver, en el cliente, que ids calzan con el modelo elegido. Se pide UNA
+// sola vez por sesion (se cachea la promesa) y en lotes explicitos de 1000
+// via .range() - asi no importa cual sea el limite de filas configurado en
+// el proyecto de Supabase, nunca depende de un limite implicito (por eso se
+// habia perdido antes el producto 100648 del listado sin paginar).
+const LOTE_MODELOS = 1000;
+let cacheModelosPromise = null;
+
+export function listModelosProductos() {
+  if (!cacheModelosPromise) {
+    cacheModelosPromise = (async () => {
+      const filas = [];
+      let desde = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("productos")
+          .select("id, modelo")
+          .range(desde, desde + LOTE_MODELOS - 1);
+        if (error) throw error;
+        filas.push(...data);
+        if (data.length < LOTE_MODELOS) break;
+        desde += LOTE_MODELOS;
+      }
+      return filas;
+    })().catch((error) => {
+      cacheModelosPromise = null;
+      throw error;
+    });
+  }
+  return cacheModelosPromise;
 }
 
 export async function getProducto(id, rol) {
@@ -66,6 +185,22 @@ export async function updateProducto(id, payload) {
 
   if (error) throw error;
   return data;
+}
+
+// Si el producto ya fue cotizado alguna vez, la FK cotizacion_items ->
+// productos (sin ON DELETE CASCADE) hace fallar el borrado con codigo 23503:
+// se traduce a un mensaje que sugiere marcarlo inactivo en vez de borrarlo.
+export async function deleteProducto(id) {
+  const { error } = await supabase.from("productos").delete().eq("id", id);
+
+  if (error) {
+    if (error.code === "23503") {
+      throw new Error(
+        "Este producto ya tiene cotizaciones asociadas y no se puede eliminar. Marca su estado como \"Inactivo\" en su lugar."
+      );
+    }
+    throw error;
+  }
 }
 
 async function resolverCategorias(filas) {
@@ -132,28 +267,13 @@ export async function importProductos(filas, archivosPorNombre = new Map(), onPr
   // reconoce por cualquiera de los dos.
   const codigosBarras = filas.map((f) => f.codigo_barras).filter(Boolean);
   const codigosReferencia = filas.map((f) => f.codigo_referencia).filter(Boolean);
-  let existentesPorCodigoBarras = new Map();
-  let existentesPorCodigoReferencia = new Map();
 
-  if (codigosBarras.length > 0) {
-    const { data: existentes, error } = await supabase
-      .from("productos")
-      .select("id, codigo_barras")
-      .in("codigo_barras", codigosBarras);
-
-    if (error) throw error;
-    existentesPorCodigoBarras = new Map(existentes.map((p) => [p.codigo_barras, p.id]));
-  }
-
-  if (codigosReferencia.length > 0) {
-    const { data: existentes, error } = await supabase
-      .from("productos")
-      .select("id, codigo_referencia")
-      .in("codigo_referencia", codigosReferencia);
-
-    if (error) throw error;
-    existentesPorCodigoReferencia = new Map(existentes.map((p) => [p.codigo_referencia, p.id]));
-  }
+  const existentesPorCodigoBarras =
+    codigosBarras.length > 0 ? await buscarExistentesPorColumna("codigo_barras", codigosBarras) : new Map();
+  const existentesPorCodigoReferencia =
+    codigosReferencia.length > 0
+      ? await buscarExistentesPorColumna("codigo_referencia", codigosReferencia)
+      : new Map();
 
   const paraInsertar = [];
   const paraActualizar = [];
@@ -196,24 +316,37 @@ export async function importProductos(filas, archivosPorNombre = new Map(), onPr
     }
   }
 
-  onProgress?.("guardando", 0, paraInsertar.length + paraActualizar.length);
+  const totalGuardar = paraInsertar.length + paraActualizar.length;
+  onProgress?.("guardando", 0, totalGuardar);
 
   if (paraInsertar.length > 0) {
-    const { error } = await supabase.from("productos").insert(paraInsertar);
-    if (error) throw error;
+    let insertados = 0;
+    for (const lote of dividirEnLotes(paraInsertar, LOTE_INSERCION)) {
+      const { error } = await supabase.from("productos").insert(lote);
+      if (error) throw error;
+      insertados += lote.length;
+      onProgress?.("guardando", insertados, totalGuardar);
+    }
     resumen.creados = paraInsertar.length;
   }
-  onProgress?.("guardando", paraInsertar.length, paraInsertar.length + paraActualizar.length);
 
-  for (const { id, payload } of paraActualizar) {
-    const { error } = await supabase.from("productos").update(payload).eq("id", id);
-    if (error) {
-      resumen.errores.push({ fila: null, motivo: `No se pudo actualizar el producto ${id}: ${error.message}` });
-      continue;
+  for (const tanda of dividirEnLotes(paraActualizar, CONCURRENCIA_ACTUALIZACION)) {
+    const resultados = await Promise.all(
+      tanda.map(async ({ id, payload }) => {
+        const { error } = await supabase.from("productos").update(payload).eq("id", id);
+        return { id, error };
+      })
+    );
+
+    for (const { id, error } of resultados) {
+      if (error) {
+        resumen.errores.push({ fila: null, motivo: `No se pudo actualizar el producto ${id}: ${error.message}` });
+      } else {
+        resumen.actualizados += 1;
+      }
     }
-    resumen.actualizados += 1;
+    onProgress?.("guardando", paraInsertar.length + resumen.actualizados + resumen.errores.length, totalGuardar);
   }
-  onProgress?.("guardando", paraInsertar.length + paraActualizar.length, paraInsertar.length + paraActualizar.length);
 
   if (fotoTareasPendientes.length > 0) {
     const resultadosFotos = await subirFotosEnTandas(fotoTareasPendientes, (actual, total) =>
