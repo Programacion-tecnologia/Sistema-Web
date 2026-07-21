@@ -1,3 +1,5 @@
 node_modules/
 dist/
 .env
+# Config local de Claude Code (no compartir)
+.claude/

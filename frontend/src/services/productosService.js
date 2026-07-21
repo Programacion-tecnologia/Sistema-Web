@@ -10,7 +10,7 @@ import { ROLES } from "../utils/roles";
 // proteccion de UX, no como blindaje de base de datos: un usuario tecnico
 // con su propio token podria pedir la columna igual vía la API REST directa.
 const COLUMNAS_BASE =
-  "id, codigo_barras, codigo_referencia, nombre, descripcion, categoria_id, precio_venta, stock_fisico, stock_reservado, stock_disponible, ubicacion, estado, color, modelo, foto_url, moneda, tipo_cambio, created_by, created_at, updated_at";
+  "id, codigo_barras, codigo_referencia, nombre, descripcion, categoria_id, precio_venta, precio_mayorista, stock_fisico, stock_reservado, stock_disponible, stock_minimo, ubicacion, estado, color, modelo, unidad, foto_url, moneda, tipo_cambio, created_by, created_at, updated_at";
 
 const PRODUCTO_SELECT_COMPLETO = `${COLUMNAS_BASE}, precio_compra, categoria:categorias(id, nombre)`;
 
@@ -59,6 +59,15 @@ async function buscarExistentesPorColumna(columna, valores) {
   return mapa;
 }
 
+// Para la vista previa de Compras > Importar Excel: que codigos de
+// referencia del archivo ya existen en el catalogo (Map codigo -> id). El
+// import en si vuelve a chequear adentro de importProductos(), esto es solo
+// para mostrar "Nuevo"/"Existente" antes de confirmar.
+export async function buscarIdsPorCodigoReferencia(codigos) {
+  if (codigos.length === 0) return new Map();
+  return buscarExistentesPorColumna("codigo_referencia", codigos);
+}
+
 export async function listProductos(rol) {
   const { data, error } = await supabase
     .from("productos")
@@ -78,19 +87,54 @@ export async function listProductos(rol) {
 
 export const PRODUCTOS_PAGE_SIZE = 30;
 
-// Escapa los caracteres especiales de ILIKE (%, _) para que se busquen tal
-// cual si aparecen en el termino (los codigos de referencia usan "_" como
-// separador real, no como wildcard), y envuelve el patron entre comillas
-// para que .or() no se rompa si el termino trae una coma.
-function construirPatronIlike(termino) {
-  const escapado = termino.replace(/[\\%_]/g, (c) => `\\${c}`).replace(/"/g, '\\"');
-  return `"%${escapado}%"`;
+// Escapa los caracteres especiales de ILIKE (%, _ y la \ misma) para que se
+// busquen tal cual si aparecen en el termino (los codigos de referencia usan
+// "_" como separador real, no como wildcard), y ademas la comilla doble, que
+// es la que delimita el patron dentro de .or().
+function escaparIlike(termino) {
+  return termino.replace(/[\\%_]/g, (c) => `\\${c}`).replace(/"/g, '\\"');
 }
 
-export async function buscarProductosPaginado({ rol, pagina, termino = "", marcaId = "", ids = null }) {
-  // ids: lista de ids a la que restringir (ej. filtro de Modelo, resuelto en
-  // el cliente contra listModelosProductos()). null = sin restriccion.
-  if (ids !== null && ids.length === 0) {
+// Envuelve el patron entre comillas para que .or() no se rompa si el termino
+// trae una coma, y lo rodea de % para buscar como substring.
+function construirPatronIlike(termino) {
+  return `"%${escaparIlike(termino)}%"`;
+}
+
+// Filtro de Modelo del lado del servidor, sin bajar ni mandar la lista de ids
+// (con cientos de UUIDs la URL de .in("id", ...) superaba el limite y
+// PostgREST devolvia 400). El campo modelo guarda una o varias motos
+// separadas por " / " (ej. "CRF250R / CRF450R"), y como ya no hay barras
+// dentro del nombre de un modelo, un token calza SOLO si aparece como
+// elemento completo de esa lista - nunca como substring. Eso se expresa con
+// cuatro patrones ILIKE por variante (unico, al inicio, al final, en medio),
+// con el token literal (%/_ escapados) y las barras reales como separador,
+// para que filtrar "CB300" no traiga "CB250F TWISTER" ni "CBR250-300".
+function construirFiltroModelo(modelos) {
+  const condiciones = [];
+  for (const modelo of modelos) {
+    const t = escaparIlike(modelo);
+    condiciones.push(`modelo.ilike."${t}"`);
+    condiciones.push(`modelo.ilike."${t} / %"`);
+    condiciones.push(`modelo.ilike."% / ${t}"`);
+    condiciones.push(`modelo.ilike."% / ${t} / %"`);
+  }
+  return condiciones.join(",");
+}
+
+export async function buscarProductosPaginado({
+  rol,
+  pagina,
+  termino = "",
+  marcaId = "",
+  modelos = null,
+  porReponer = false,
+}) {
+  // modelos: variantes de texto del modelo elegido a las que restringir el
+  // listado (ej. ["CRF230F"]), resueltas en el cliente contra el dropdown.
+  // null = sin restriccion; [] = filtro activo pero sin variantes conocidas
+  // aun (datos del dropdown todavia cargando) => sin resultados.
+  if (modelos !== null && modelos.length === 0) {
     return { data: [], count: 0 };
   }
 
@@ -107,8 +151,16 @@ export async function buscarProductosPaginado({ rol, pagina, termino = "", marca
   if (marcaId) {
     consulta = consulta.eq("categoria_id", marcaId);
   }
-  if (ids !== null) {
-    consulta = consulta.in("id", ids);
+  if (porReponer) {
+    // necesita_reposicion es la columna calculada de 0015 (stock_minimo > 0 y
+    // stock_disponible <= stock_minimo): el filtro se resuelve en el servidor.
+    consulta = consulta.eq("necesita_reposicion", true);
+  }
+  if (modelos !== null) {
+    // Cada .or() es un filtro top-level independiente: PostgREST los combina
+    // con AND entre si (y con el .eq de marca), asi que este OR de patrones
+    // de modelo se intersecta correctamente con la busqueda y la marca.
+    consulta = consulta.or(construirFiltroModelo(modelos));
   }
 
   const desde = pagina * PRODUCTOS_PAGE_SIZE;
@@ -116,6 +168,41 @@ export async function buscarProductosPaginado({ rol, pagina, termino = "", marca
 
   if (error) throw error;
   return { data, count: count ?? 0 };
+}
+
+// Productos para el catálogo PDF: mismos filtros que el listado (búsqueda,
+// marca, modelo) pero trae TODOS los que matchean (no paginado), en lotes
+// explícitos de 1000 vía .range() para no depender del límite implícito del
+// proyecto (mismo patrón que listModelosProductos). Solo los campos que el
+// catálogo necesita.
+export async function buscarProductosParaCatalogo({ termino = "", marcaId = "", modelos = null }) {
+  if (modelos !== null && modelos.length === 0) return [];
+
+  const LOTE = 1000;
+  const terminoLimpio = termino.trim();
+  const patron = terminoLimpio ? construirPatronIlike(terminoLimpio) : null;
+
+  const filas = [];
+  let desde = 0;
+  while (true) {
+    let consulta = supabase
+      .from("productos")
+      .select(
+        "id, nombre, codigo_referencia, precio_venta, precio_mayorista, moneda, modelo, color, unidad, foto_url, categoria:categorias(nombre)"
+      )
+      .order("nombre");
+
+    if (patron) consulta = consulta.or(`nombre.ilike.${patron},codigo_referencia.ilike.${patron}`);
+    if (marcaId) consulta = consulta.eq("categoria_id", marcaId);
+    if (modelos !== null) consulta = consulta.or(construirFiltroModelo(modelos));
+
+    const { data, error } = await consulta.range(desde, desde + LOTE - 1);
+    if (error) throw error;
+    filas.push(...data);
+    if (data.length < LOTE) break;
+    desde += LOTE;
+  }
+  return filas;
 }
 
 // Fetch liviano (solo id + modelo) para armar el dropdown de "Modelo" y para
@@ -171,7 +258,12 @@ export async function createProducto(payload) {
     .select(PRODUCTO_SELECT_COMPLETO)
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === "23505") {
+      throw new Error("Ya existe un producto con ese código de referencia o código de barras.");
+    }
+    throw error;
+  }
   return data;
 }
 
@@ -201,6 +293,19 @@ export async function deleteProducto(id) {
     }
     throw error;
   }
+}
+
+// Trade-off documentado: el parser convierte celdas numericas vacias en 0,
+// asi que "0 explicito" y "celda vacia" son indistinguibles - un 0 en
+// precio/stock tampoco actualiza. Para poner un stock/precio en 0 de un
+// producto existente esta la pantalla de edicion del producto.
+function limpiarCamposVacios(payload) {
+  const resultado = {};
+  for (const [campo, valor] of Object.entries(payload)) {
+    if (valor === null || valor === "" || (typeof valor === "number" && valor === 0)) continue;
+    resultado[campo] = valor;
+  }
+  return resultado;
 }
 
 async function resolverCategorias(filas) {
@@ -248,11 +353,19 @@ async function subirFotosEnTandas(tareas, onProgress) {
  * @param {Array} filas - filas ya parseadas por excelService.parseProductosExcel
  * @param {Map<string, File>} archivosPorNombre - nombre de archivo (lowercase) -> File, del lote opcional de fotos
  * @param {(etapa: string, actual: number, total: number) => void} [onProgress]
+ * @param {{ compra_id: string, moneda: string } | null} [opcionesCompra] - si la
+ *   importacion nace asociada a una compra (ver ProductosImportar.jsx): el
+ *   stock y el costo de compra NO se escriben directo en productos, nacen
+ *   como lineas de compra_items y solo se aplican de verdad cuando alguien
+ *   reciba esa compra (recibir_compra(), 0012) - mismo camino y misma
+ *   auditoria que cualquier otra compra, sea el producto nuevo o ya
+ *   existente (reabastecimiento).
  */
-export async function importProductos(filas, archivosPorNombre = new Map(), onProgress) {
+export async function importProductos(filas, archivosPorNombre = new Map(), onProgress, opcionesCompra = null) {
   const resumen = {
     creados: 0,
     actualizados: 0,
+    itemsCompra: 0,
     fotosSubidas: 0,
     fotosNoEncontradas: [],
     errores: [],
@@ -278,9 +391,10 @@ export async function importProductos(filas, archivosPorNombre = new Map(), onPr
   const paraInsertar = [];
   const paraActualizar = [];
   const fotoTareasPendientes = [];
+  const compraItemsPendientes = [];
 
   for (const fila of filas) {
-    const payloadBase = {
+    const camposComunes = {
       codigo_referencia: fila.codigo_referencia,
       codigo_barras: fila.codigo_barras,
       nombre: fila.nombre,
@@ -288,9 +402,8 @@ export async function importProductos(filas, archivosPorNombre = new Map(), onPr
       categoria_id: categoriaIdPorFila.get(fila.numeroFila) ?? null,
       color: fila.color,
       modelo: fila.modelo,
-      precio_compra: fila.precio_compra,
       precio_venta: fila.precio_venta,
-      stock_fisico: fila.stock_fisico,
+      precio_mayorista: fila.precio_mayorista ?? 0,
       ubicacion: fila.ubicacion,
     };
 
@@ -301,9 +414,37 @@ export async function importProductos(filas, archivosPorNombre = new Map(), onPr
     const productoId = idExistente ?? crypto.randomUUID();
 
     if (idExistente) {
-      paraActualizar.push({ id: idExistente, payload: payloadBase });
+      // Reabastecimiento atado a una compra: NO se toca stock_fisico ni
+      // precio_compra aca (se omiten del payload) - suben juntos, de verdad,
+      // recien cuando se reciba la compra.
+      // limpiarCamposVacios: en un producto YA existente, una celda vacia
+      // del Excel significa "no tocar ese campo", no "borrarlo" - asi un
+      // Excel de reabastecimiento con solo codigo+cantidad+costo no pisa
+      // color/modelo/marca/precios del catalogo (decision de negocio,
+      // 2026-07-17; antes un vacio sobrescribia con null/0 y borro datos
+      // reales en una prueba).
+      const payload = limpiarCamposVacios(
+        opcionesCompra
+          ? camposComunes
+          : { ...camposComunes, precio_compra: fila.precio_compra, stock_fisico: fila.stock_fisico }
+      );
+      paraActualizar.push({ id: idExistente, payload });
     } else {
-      paraInsertar.push({ id: productoId, ...payloadBase });
+      // Producto nuevo atado a una compra: nace con stock 0 (y precio_compra
+      // en su default 0) - mismo motivo que arriba.
+      const payload = opcionesCompra
+        ? { ...camposComunes, moneda: opcionesCompra.moneda, stock_fisico: 0 }
+        : { ...camposComunes, precio_compra: fila.precio_compra, stock_fisico: fila.stock_fisico };
+      paraInsertar.push({ id: productoId, ...payload });
+    }
+
+    if (opcionesCompra && fila.stock_fisico > 0) {
+      compraItemsPendientes.push({
+        compra_id: opcionesCompra.compra_id,
+        producto_id: productoId,
+        cantidad: fila.stock_fisico,
+        costo_unitario: fila.precio_compra ?? 0,
+      });
     }
 
     if (fila.foto_archivo) {
@@ -346,6 +487,22 @@ export async function importProductos(filas, archivosPorNombre = new Map(), onPr
       }
     }
     onProgress?.("guardando", paraInsertar.length + resumen.actualizados + resumen.errores.length, totalGuardar);
+  }
+
+  // Recien aca, con los productos (nuevos y existentes) ya insertados/
+  // actualizados de verdad en la base, se registran las lineas de compra -
+  // productoId ya se conocia de antemano (mismo motivo que
+  // fotoTareasPendientes: se genera client-side antes del insert).
+  if (compraItemsPendientes.length > 0) {
+    onProgress?.("compra", 0, compraItemsPendientes.length);
+    let registrados = 0;
+    for (const lote of dividirEnLotes(compraItemsPendientes, LOTE_INSERCION)) {
+      const { error } = await supabase.from("compra_items").insert(lote);
+      if (error) throw error;
+      registrados += lote.length;
+      onProgress?.("compra", registrados, compraItemsPendientes.length);
+    }
+    resumen.itemsCompra = compraItemsPendientes.length;
   }
 
   if (fotoTareasPendientes.length > 0) {

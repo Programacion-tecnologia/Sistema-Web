@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { createCliente, getCliente, getHistorialCliente, updateCliente } from "../../services/clientesService";
+import { consultarDocumento, FUENTE_LABEL } from "../../services/documentosService";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
 import { ESTADO_LABEL, ESTADO_BADGE_CLASS } from "../../utils/cotizacionEstado";
@@ -27,6 +28,26 @@ export default function ClienteDetalle() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [mensaje, setMensaje] = useState(null);
+  const [consultando, setConsultando] = useState(false);
+
+  const handleConsultar = async () => {
+    setConsultando(true);
+    setError(null);
+    setMensaje(null);
+    try {
+      const r = await consultarDocumento(form.ruc_dni);
+      setForm((prev) => ({
+        ...prev,
+        nombre: r.nombre ?? prev.nombre,
+        direccion: r.direccion ?? prev.direccion,
+      }));
+      setMensaje(FUENTE_LABEL[r.fuente] ?? null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setConsultando(false);
+    }
+  };
 
   useEffect(() => {
     if (!modoEdicion) return;
@@ -117,7 +138,20 @@ export default function ClienteDetalle() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">RUC/DNI</label>
-              <input value={form.ruc_dni} onChange={handleChange("ruc_dni")} className={INPUT_CLASS} />
+              <div className="flex gap-2">
+                <input value={form.ruc_dni} onChange={handleChange("ruc_dni")} className={INPUT_CLASS} />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={consultando}
+                  onClick={handleConsultar}
+                >
+                  {consultando ? "..." : "Consultar"}
+                </Button>
+              </div>
+              <p className="mt-1 text-xs text-slate-400">
+                Consulta SUNAT/RENIEC y autocompleta nombre y dirección.
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>

@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   createProducto,
   getProducto,
   updateProducto,
 } from "../../services/productosService";
 import { findOrCreateCategoria, listCategorias } from "../../services/categoriasService";
+import { listProveedoresPorProducto } from "../../services/comprasService";
 import { uploadProductoFoto } from "../../services/storageService";
 import { obtenerTipoCambioReferencial } from "../../services/tipoCambioService";
 import { useAuth } from "../../hooks/useAuth";
@@ -26,10 +27,12 @@ const FORM_INICIAL = {
   descripcion: "",
   color: "",
   modelo: "",
+  unidad: "",
   moneda: "PEN",
   tipo_cambio: "",
   precio_compra: "",
   precio_venta: "",
+  precio_mayorista: "",
   stock_fisico: "",
   ubicacion: "",
   estado: "activo",
@@ -54,10 +57,18 @@ export default function ProductoDetalle() {
   const [fotoError, setFotoError] = useState(null);
   const [mensaje, setMensaje] = useState(null);
   const [tipoCambioSugerido, setTipoCambioSugerido] = useState(null);
+  const [proveedoresProducto, setProveedoresProducto] = useState([]);
 
   useEffect(() => {
     listCategorias().then(setCategorias).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!modoEdicion) return;
+    listProveedoresPorProducto(id)
+      .then(setProveedoresProducto)
+      .catch(() => {});
+  }, [id, modoEdicion]);
 
   useEffect(() => {
     obtenerTipoCambioReferencial()
@@ -82,10 +93,12 @@ export default function ProductoDetalle() {
           descripcion: producto.descripcion ?? "",
           color: producto.color ?? "",
           modelo: producto.modelo ?? "",
+          unidad: producto.unidad ?? "",
           moneda: producto.moneda ?? "PEN",
           tipo_cambio: producto.tipo_cambio != null ? String(producto.tipo_cambio) : "",
           precio_compra: String(producto.precio_compra ?? ""),
           precio_venta: String(producto.precio_venta ?? ""),
+          precio_mayorista: String(producto.precio_mayorista ?? ""),
           stock_fisico: String(producto.stock_fisico ?? ""),
           ubicacion: producto.ubicacion ?? "",
           estado: producto.estado ?? "activo",
@@ -131,10 +144,12 @@ export default function ProductoDetalle() {
         categoria_id: categoriaId,
         color: form.color.trim() || null,
         modelo: form.modelo.trim() || null,
+        unidad: form.unidad.trim() || null,
         moneda: form.moneda,
         tipo_cambio: form.tipo_cambio.trim() ? Number(form.tipo_cambio) : null,
         precio_compra: Number(form.precio_compra) || 0,
         precio_venta: Number(form.precio_venta) || 0,
+        precio_mayorista: Number(form.precio_mayorista) || 0,
         stock_fisico: Math.trunc(Number(form.stock_fisico)) || 0,
         ubicacion: form.ubicacion.trim() || null,
         estado: form.estado,
@@ -268,6 +283,13 @@ export default function ProductoDetalle() {
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Unidad (Um: PIEZA, PAR, JUEGO...)
+                </label>
+                <input value={form.unidad} onChange={handleChange("unidad")} className={INPUT_CLASS} />
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Moneda</label>
                 <select value={form.moneda} onChange={handleChange("moneda")} className={INPUT_CLASS}>
                   <option value="PEN">Soles (PEN)</option>
@@ -327,6 +349,20 @@ export default function ProductoDetalle() {
                   min="0"
                   value={form.precio_venta}
                   onChange={handleChange("precio_venta")}
+                  className={INPUT_CLASS}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Precio mayorista
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.precio_mayorista}
+                  onChange={handleChange("precio_mayorista")}
                   className={INPUT_CLASS}
                 />
               </div>
@@ -401,6 +437,28 @@ export default function ProductoDetalle() {
           {subiendoFoto && <p className="mt-2 text-xs text-slate-500">Subiendo...</p>}
           {fotoError && <p className="mt-2 text-xs text-danger-600">{fotoError}</p>}
         </Card>
+
+        {modoEdicion && (
+          <Card className="w-full lg:w-64 shrink-0">
+            <p className="text-sm font-medium text-slate-700 mb-3">Comprado a</p>
+            {proveedoresProducto.length === 0 ? (
+              <p className="text-xs text-slate-400">Sin compras recibidas todavía.</p>
+            ) : (
+              <ul className="space-y-3 text-sm">
+                {proveedoresProducto.map((proveedor) => (
+                  <li key={proveedor.id}>
+                    <Link to={`/proveedores/${proveedor.id}`} className="text-primary-600 hover:underline">
+                      {proveedor.nombre}
+                    </Link>
+                    <span className="block text-xs text-slate-400">
+                      Última compra: {new Date(proveedor.ultimaCompra).toLocaleDateString("es-PE")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        )}
       </div>
     </>
   );

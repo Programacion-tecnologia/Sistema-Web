@@ -17,7 +17,10 @@ import Button from "../../components/Button/Button";
 import { ESTADO_LABEL, ESTADO_BADGE_CLASS } from "../../utils/cotizacionEstado";
 import { formatearPrecio } from "../../utils/currency";
 import { getNivelStock, STOCK_NIVEL_CLASS } from "../../utils/stock";
+import { normalizarTexto } from "../../utils/normalizar";
 import { generarPdfCotizacion } from "../../utils/pdfCotizacion";
+import { getConfiguracionEmpresa } from "../../services/configuracionService";
+import { compartirPorWhatsApp } from "../../utils/whatsapp";
 import { ROLES } from "../../utils/roles";
 
 const INPUT_CLASS =
@@ -47,6 +50,8 @@ export default function CotizacionDetalle() {
   const [items, setItems] = useState([]);
   const [productoSeleccionado, setProductoSeleccionado] = useState("");
   const [cantidadNueva, setCantidadNueva] = useState("1");
+  const [busquedaProducto, setBusquedaProducto] = useState("");
+  const [mostrarResultados, setMostrarResultados] = useState(false);
 
   useEffect(() => {
     if (modoEdicion) return;
@@ -78,9 +83,26 @@ export default function CotizacionDetalle() {
     [items]
   );
 
+  // Busqueda con la misma normalizacion que el modulo Productos: ignora
+  // espacios/guiones/puntos/underscore/slash, asi pegar "cp331bcm" encuentra
+  // "CP331BCM _ CAL261BC40" tal como esta escrito en el catalogo.
+  const resultadosBusqueda = useMemo(() => {
+    const termino = normalizarTexto(busquedaProducto);
+    if (!termino) return [];
+    return productosDisponibles
+      .filter(
+        (producto) =>
+          normalizarTexto(producto.nombre).includes(termino) ||
+          normalizarTexto(producto.codigo_referencia).includes(termino)
+      )
+      .slice(0, 15);
+  }, [productosDisponibles, busquedaProducto]);
+
   const cambiarMoneda = (event) => {
     setMoneda(event.target.value);
     setItems([]);
+    setProductoSeleccionado("");
+    setBusquedaProducto("");
   };
 
   const agregarItem = () => {
@@ -99,6 +121,7 @@ export default function CotizacionDetalle() {
       },
     ]);
     setProductoSeleccionado("");
+    setBusquedaProducto("");
     setCantidadNueva("1");
   };
 
@@ -152,12 +175,31 @@ export default function CotizacionDetalle() {
     }
   };
 
-  const handleDescargarPdf = (total) => {
+  const handleDescargarPdf = async (total) => {
     try {
-      generarPdfCotizacion({ cotizacion, total });
+      const config = await getConfiguracionEmpresa().catch(() => null);
+      await generarPdfCotizacion({ cotizacion, total, config });
     } catch (err) {
       setError(err.message);
     }
+  };
+
+  const handleWhatsApp = async (total) => {
+    const config = await getConfiguracionEmpresa().catch(() => null);
+    const lineas = [];
+    if (config?.razon_social) lineas.push(`*${config.razon_social}*`);
+    lineas.push(
+      `Cotización N° ${cotizacion.id.slice(0, 8).toUpperCase()}`,
+      `Cliente: ${cotizacion.cliente?.nombre ?? "—"}`,
+      ""
+    );
+    for (const it of cotizacion.items) {
+      lineas.push(
+        `• ${it.cantidad} x ${it.producto?.nombre ?? "-"} — ${formatearPrecio(it.cantidad * it.precio_unitario, cotizacion.moneda)}`
+      );
+    }
+    lineas.push("", `*Total: ${formatearPrecio(total, cotizacion.moneda)}*`, "", "Cotización válida por 3 días.");
+    compartirPorWhatsApp(cotizacion.cliente?.telefono, lineas.join("\n"));
   };
 
   const ejecutarAccion = async (accion) => {
@@ -234,9 +276,14 @@ export default function CotizacionDetalle() {
 
           <div className="flex items-center gap-3 flex-wrap">
             {["borrador", "enviada"].includes(cotizacion.estado) && (
-              <Button variant="secondary" onClick={() => handleDescargarPdf(totalActual)}>
-                Descargar cotización (PDF)
-              </Button>
+              <>
+                <Button variant="secondary" onClick={() => handleDescargarPdf(totalActual)}>
+                  Descargar cotización (PDF)
+                </Button>
+                <Button variant="success" onClick={() => handleWhatsApp(totalActual)}>
+                  WhatsApp
+                </Button>
+              </>
             )}
 
             {cotizacion.estado === "borrador" && PUEDE_ENVIAR_CANCELAR.includes(rol) && (
@@ -326,19 +373,50 @@ export default function CotizacionDetalle() {
           <div className="border-t border-slate-200 pt-4">
             <p className="text-sm font-medium text-slate-700 mb-2">Agregar producto</p>
             <div className="flex items-end gap-3 flex-wrap">
-              <div className="flex-1 min-w-[200px]">
-                <select
-                  value={productoSeleccionado}
-                  onChange={(event) => setProductoSeleccionado(event.target.value)}
+              {/* El dropdown usa onMouseDown (no onClick) para ganar la
+                  carrera contra el onBlur del input, que cierra la lista. */}
+              <div className="flex-1 min-w-[200px] relative">
+                <input
+                  value={busquedaProducto}
+                  onChange={(event) => {
+                    setBusquedaProducto(event.target.value);
+                    setProductoSeleccionado("");
+                  }}
+                  onFocus={() => setMostrarResultados(true)}
+                  onBlur={() => setTimeout(() => setMostrarResultados(false), 150)}
+                  placeholder={`Busca por nombre o código (${moneda})...`}
                   className={INPUT_CLASS}
-                >
-                  <option value="">Selecciona un producto en {moneda}...</option>
-                  {productosDisponibles.map((producto) => (
-                    <option key={producto.id} value={producto.id}>
-                      {producto.nombre} — stock disponible: {producto.stock_disponible}
-                    </option>
-                  ))}
-                </select>
+                />
+                {mostrarResultados && !productoSeleccionado && resultadosBusqueda.length > 0 && (
+                  <ul className="absolute z-10 mt-1 w-full max-h-64 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                    {resultadosBusqueda.map((producto) => (
+                      <li key={producto.id}>
+                        <button
+                          type="button"
+                          onMouseDown={() => {
+                            setProductoSeleccionado(producto.id);
+                            setBusquedaProducto(producto.nombre);
+                          }}
+                          className="w-full text-left px-3 py-2 hover:bg-slate-50"
+                        >
+                          <span className="block text-sm text-slate-800">{producto.nombre}</span>
+                          <span className="block text-xs text-slate-400">
+                            {producto.codigo_referencia && `REF: ${producto.codigo_referencia} — `}
+                            stock disponible: {producto.stock_disponible}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {mostrarResultados &&
+                  !productoSeleccionado &&
+                  busquedaProducto.trim() &&
+                  resultadosBusqueda.length === 0 && (
+                    <p className="absolute z-10 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg px-3 py-2 text-xs text-slate-400">
+                      Ningún producto en {moneda} coincide con la búsqueda.
+                    </p>
+                  )}
               </div>
               <div className="w-24">
                 <input

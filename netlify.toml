@@ -1,0 +1,19 @@
+# Deploy del frontend (Vite/React SPA) en Netlify.
+# El repo tiene el frontend en la subcarpeta `frontend/`; el backend es Supabase
+# (no se hospeda acá). Migrar a otro host = reapuntar el repo, `npm run build` y
+# publicar `frontend/dist` (más el redirect SPA del host de turno).
+
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# SPA: React Router maneja las rutas en el cliente, así que cualquier URL debe
+# servir index.html (si no, un refresh en /productos daría 404).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

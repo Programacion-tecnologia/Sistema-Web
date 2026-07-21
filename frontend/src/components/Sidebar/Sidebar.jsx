@@ -3,20 +3,25 @@ import { useAuth } from "../../hooks/useAuth";
 import { ROLES } from "../../utils/roles";
 
 // "roles" ausente = visible para cualquier rol logueado. Solo se restringen
-// los modulos donde eso realmente importa hoy (Scanner, Usuarios) - los
-// modulos todavia placeholder (Compras/Ventas/Proveedores/Reportes/etc.) no
-// tienen todavia una razon de negocio concreta para ocultarse por rol.
+// los modulos donde eso realmente importa hoy (Scanner, Usuarios). Compras y
+// Proveedores se ven abiertos (igual que Cotizaciones): el listado es de
+// lectura abierta por RLS, la creacion/edicion se restringe adentro de cada
+// pantalla (Admin/Gerencia). Los modulos todavia placeholder (Ventas,
+// Reportes, etc.) tampoco tienen todavia una razon de negocio para
+// ocultarse por rol.
 const MENU = [
     { path: "/", label: "Dashboard", end: true },
     { path: "/inventario", label: "Inventario" },
     { path: "/productos", label: "Productos" },
     { path: "/compras", label: "Compras" },
     { path: "/ventas", label: "Ventas" },
+    { path: "/caja", label: "Caja" },
+    { path: "/guias", label: "Guías de remisión" },
     { path: "/clientes", label: "Clientes" },
     { path: "/proveedores", label: "Proveedores" },
     { path: "/cotizaciones", label: "Cotizaciones" },
     { path: "/scanner", label: "Scanner", roles: [ROLES.ALMACEN, ROLES.GERENCIA, ROLES.ADMIN] },
-    { path: "/reportes", label: "Reportes" },
+    { path: "/reportes", label: "Reportes", roles: [ROLES.ADMIN, ROLES.GERENCIA] },
     { path: "/usuarios", label: "Usuarios", roles: [ROLES.ADMIN] },
     { path: "/configuracion", label: "Configuración" },
 

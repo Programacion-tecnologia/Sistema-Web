@@ -65,4 +65,37 @@ body {
     font-weight: 700;
     letter-spacing: -0.01em;
   }
+
+  /* Botón nativo "Elegir archivo"/"Examinar" de todos los <input type="file">
+     (Importar Excel de Compras/Productos, fotos de producto, PDF de
+     cotizaciones): el navegador lo pinta gris plano y no parece clickeable.
+     Se estiliza global para que se vea igual que <Button variant="primary">
+     sin tener que repetir clases en cada pantalla. */
+  input[type="file"] {
+    color: var(--color-slate-600);
+    font-size: 0.875rem;
+  }
+
+  input[type="file"]::file-selector-button {
+    margin-right: 0.75rem;
+    border: 0;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: white;
+    background-color: var(--color-primary-600);
+    cursor: pointer;
+    transition: background-color 150ms;
+  }
+
+  input[type="file"]:hover::file-selector-button {
+    background-color: var(--color-primary-700);
+  }
+
+  input[type="file"]:disabled::file-selector-button {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }

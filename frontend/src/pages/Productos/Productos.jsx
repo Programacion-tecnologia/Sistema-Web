@@ -2,11 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   buscarProductosPaginado,
+  buscarProductosParaCatalogo,
   deleteProducto,
   listModelosProductos,
   PRODUCTOS_PAGE_SIZE,
 } from "../../services/productosService";
 import { listCategorias } from "../../services/categoriasService";
+import { getConfiguracionEmpresa } from "../../services/configuracionService";
+import { generarCatalogoPdf } from "../../utils/pdfCatalogo";
 import { useAuth } from "../../hooks/useAuth";
 import { ROLES } from "../../utils/roles";
 import Card from "../../components/Card/Card";
@@ -15,6 +18,7 @@ import FotoProducto from "../../components/Productos/FotoProducto";
 import { getNivelStock, STOCK_NIVEL_CLASS } from "../../utils/stock";
 import { formatearPrecio } from "../../utils/currency";
 import { normalizarTexto } from "../../utils/normalizar";
+import { productosListState } from "../../utils/productosListState";
 
 const PUEDE_ESCRIBIR_PRODUCTOS = [ROLES.ADMIN, ROLES.GERENCIA];
 
@@ -32,6 +36,28 @@ function extraerModelos(modeloRaw) {
     .filter(Boolean);
 }
 
+// Ventana de numeros de pagina centrada en la pagina actual (0-indexed),
+// con la primera y ultima siempre visibles como acceso directo. Con ~78
+// paginas no tiene sentido listarlas todas: se usa "..." para lo que queda
+// afuera de la ventana.
+function construirPaginasVisibles(paginaActual, totalPaginas, radio = 3) {
+  const ultima = totalPaginas - 1;
+  const inicio = Math.max(0, paginaActual - radio);
+  const fin = Math.min(ultima, paginaActual + radio);
+
+  const paginas = [];
+  if (inicio > 0) {
+    paginas.push(0);
+    if (inicio > 1) paginas.push("...");
+  }
+  for (let i = inicio; i <= fin; i++) paginas.push(i);
+  if (fin < ultima) {
+    if (fin < ultima - 1) paginas.push("...");
+    paginas.push(ultima);
+  }
+  return paginas;
+}
+
 export default function Productos() {
   const navigate = useNavigate();
   const { rol } = useAuth();
@@ -40,15 +66,42 @@ export default function Productos() {
 
   const [productos, setProductos] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [pagina, setPagina] = useState(0);
+  const [pagina, setPagina] = useState(() => productosListState.pagina);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const [busqueda, setBusqueda] = useState("");
-  const [terminoDebounced, setTerminoDebounced] = useState("");
-  const [marcaId, setMarcaId] = useState("");
-  const [modeloClave, setModeloClave] = useState("");
+  const [busqueda, setBusqueda] = useState(() => productosListState.busqueda);
+  const [terminoDebounced, setTerminoDebounced] = useState(() => productosListState.busqueda.trim());
+  const [marcaId, setMarcaId] = useState(() => productosListState.marcaId);
+  const [modeloClave, setModeloClave] = useState(() => productosListState.modeloClave);
   const [eliminandoId, setEliminandoId] = useState(null);
+  const [generandoCatalogo, setGenerandoCatalogo] = useState(false);
+  const [avisoCatalogo, setAvisoCatalogo] = useState(null);
+
+  // Cambiar de pagina o de cualquier filtro se guarda en el cache de modulo
+  // (productosListState) ademas de en el estado local, para que sobreviva a
+  // que este componente se desmonte al entrar al detalle de un producto.
+  const cambiarPagina = (nueva) => {
+    setPagina(nueva);
+    productosListState.pagina = nueva;
+  };
+
+  const cambiarBusqueda = (valor) => {
+    setBusqueda(valor);
+    productosListState.busqueda = valor;
+  };
+
+  const cambiarMarca = (valor) => {
+    setMarcaId(valor);
+    productosListState.marcaId = valor;
+    cambiarPagina(0);
+  };
+
+  const cambiarModelo = (valor) => {
+    setModeloClave(valor);
+    productosListState.modeloClave = valor;
+    cambiarPagina(0);
+  };
 
   const [marcas, setMarcas] = useState([]);
   const [modelosData, setModelosData] = useState([]);
@@ -94,30 +147,31 @@ export default function Productos() {
         actual[1] > mejor[1] ? actual : mejor
       );
       const total = Array.from(variantes.values()).reduce((suma, count) => suma + count, 0);
-      return { clave, label, total };
+      // Las variantes son las escrituras crudas del token tal cual estan
+      // guardadas en la columna modelo (ej. "CRF230F", "CRF 230F"): se pasan
+      // al filtro server-side para que matchee todas las formas que el
+      // dropdown agrupo bajo esta misma clave normalizada.
+      return { clave, label, total, variantes: Array.from(variantes.keys()) };
     }).sort((a, b) => b.total - a.total || a.label.localeCompare(b.label));
   }, [modelosData]);
 
-  // El filtro de Modelo no se puede expresar como un filtro simple en
-  // Supabase (requiere normalizar texto libre), asi que se resuelve en el
-  // cliente contra el fetch liviano de arriba y se manda como .in("id", ...)
-  // en la consulta paginada.
-  const idsPorModelo = useMemo(() => {
+  // Filtro de Modelo: en vez de resolver ids en el cliente y mandarlos con
+  // .in("id", [...cientos...]) (URL que superaba el limite y devolvia 400),
+  // se pasan las variantes de texto del modelo elegido y el filtrado se hace
+  // del lado del servidor sobre la columna modelo. null = sin filtro; [] =
+  // filtro puesto pero el dropdown aun no cargo (=> sin resultados por ahora).
+  const variantesModelo = useMemo(() => {
     if (!modeloClave) return null;
-    const ids = [];
-    for (const fila of modelosData) {
-      const tokens = extraerModelos(fila.modelo).map(normalizarTexto);
-      if (tokens.includes(modeloClave)) ids.push(fila.id);
-    }
-    return ids;
-  }, [modelosData, modeloClave]);
+    const grupo = modelos.find((m) => m.clave === modeloClave);
+    return grupo ? grupo.variantes : [];
+  }, [modelos, modeloClave]);
 
   // Se recalcula la key en cada render y se compara contra la ultima
   // cargada: si cambio algun filtro/pagina, arranca un fetch nuevo. Ajustar
   // el estado durante el render (en vez de en un useEffect) es el patron que
   // recomienda React para "resetear estado cuando cambia una dependencia" -
   // evita el flash de un setState sincrono al toque de entrar al effect.
-  const filtrosKey = JSON.stringify({ rol, pagina, terminoDebounced, marcaId, idsPorModelo });
+  const filtrosKey = JSON.stringify({ rol, pagina, terminoDebounced, marcaId, variantesModelo });
   const [filtrosKeyCargada, setFiltrosKeyCargada] = useState(null);
   if (filtrosKey !== filtrosKeyCargada) {
     setFiltrosKeyCargada(filtrosKey);
@@ -128,7 +182,7 @@ export default function Productos() {
   useEffect(() => {
     let activo = true;
 
-    buscarProductosPaginado({ rol, pagina, termino: terminoDebounced, marcaId, ids: idsPorModelo })
+    buscarProductosPaginado({ rol, pagina, termino: terminoDebounced, marcaId, modelos: variantesModelo })
       .then(({ data, count }) => {
         if (!activo) return;
         setProductos(data);
@@ -144,7 +198,28 @@ export default function Productos() {
     return () => {
       activo = false;
     };
-  }, [rol, pagina, terminoDebounced, marcaId, idsPorModelo]);
+  }, [rol, pagina, terminoDebounced, marcaId, variantesModelo]);
+
+  const handleCatalogo = async () => {
+    setGenerandoCatalogo(true);
+    setAvisoCatalogo(null);
+    setError(null);
+    try {
+      const [config, prods] = await Promise.all([
+        getConfiguracionEmpresa().catch(() => null),
+        buscarProductosParaCatalogo({ termino: terminoDebounced, marcaId, modelos: variantesModelo }),
+      ]);
+      if (prods.length === 0) {
+        setAvisoCatalogo("No hay productos para el catálogo con los filtros actuales.");
+        return;
+      }
+      await generarCatalogoPdf({ productos: prods, config });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGenerandoCatalogo(false);
+    }
+  };
 
   const handleEliminar = async (producto) => {
     const confirmado = window.confirm(
@@ -167,24 +242,77 @@ export default function Productos() {
   };
 
   const hayFiltrosActivos = Boolean(terminoDebounced || marcaId || modeloClave);
+
+  // Chips de filtros activos: cada uno se puede quitar individualmente con su
+  // "x". Se arman a partir del estado actual, resolviendo el nombre legible de
+  // marca y modelo contra los datos ya cargados de los dropdowns.
+  const filtrosActivos = [];
+  if (terminoDebounced) {
+    filtrosActivos.push({
+      clave: "busqueda",
+      etiqueta: "Búsqueda",
+      valor: terminoDebounced,
+      quitar: () => {
+        cambiarBusqueda("");
+        cambiarPagina(0);
+      },
+    });
+  }
+  if (marcaId) {
+    const marca = marcas.find((m) => m.id === marcaId);
+    filtrosActivos.push({
+      clave: "marca",
+      etiqueta: "Marca",
+      valor: marca?.nombre ?? marcaId,
+      quitar: () => cambiarMarca(""),
+    });
+  }
+  if (modeloClave) {
+    const modelo = modelos.find((m) => m.clave === modeloClave);
+    filtrosActivos.push({
+      clave: "modelo",
+      etiqueta: "Modelo",
+      valor: modelo?.label ?? modeloClave,
+      quitar: () => cambiarModelo(""),
+    });
+  }
+
+  const limpiarFiltros = () => {
+    cambiarBusqueda("");
+    cambiarMarca("");
+    cambiarModelo("");
+    cambiarPagina(0);
+  };
+
   const totalPaginas = Math.max(1, Math.ceil(totalCount / PRODUCTOS_PAGE_SIZE));
+  const paginasVisibles = useMemo(
+    () => construirPaginasVisibles(pagina, totalPaginas),
+    [pagina, totalPaginas]
+  );
 
   return (
     <>
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <h2 className="text-3xl font-bold">Productos</h2>
 
-        {puedeEscribir && (
-          <div className="flex items-center gap-3">
-            <Link to="/productos/importar">
-              <Button variant="secondary">Importar desde Excel</Button>
-            </Link>
-            <Link to="/productos/nuevo">
-              <Button>Nuevo producto</Button>
-            </Link>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <Button variant="secondary" disabled={generandoCatalogo} onClick={handleCatalogo}>
+            {generandoCatalogo ? "Generando..." : "Catálogo (PDF)"}
+          </Button>
+          {puedeEscribir && (
+            <>
+              <Link to="/productos/importar">
+                <Button variant="secondary">Importar desde Excel</Button>
+              </Link>
+              <Link to="/productos/nuevo">
+                <Button>Nuevo producto</Button>
+              </Link>
+            </>
+          )}
+        </div>
       </div>
+
+      {avisoCatalogo && <p className="mt-3 text-sm text-primary-700">{avisoCatalogo}</p>}
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <input
@@ -192,18 +320,15 @@ export default function Productos() {
           placeholder="Buscar por nombre o código..."
           value={busqueda}
           onChange={(event) => {
-            setBusqueda(event.target.value);
-            setPagina(0);
+            cambiarBusqueda(event.target.value);
+            cambiarPagina(0);
           }}
           className="w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
 
         <select
           value={marcaId}
-          onChange={(event) => {
-            setMarcaId(event.target.value);
-            setPagina(0);
-          }}
+          onChange={(event) => cambiarMarca(event.target.value)}
           className={SELECT_CLASS}
         >
           <option value="">Todas las marcas</option>
@@ -216,10 +341,7 @@ export default function Productos() {
 
         <select
           value={modeloClave}
-          onChange={(event) => {
-            setModeloClave(event.target.value);
-            setPagina(0);
-          }}
+          onChange={(event) => cambiarModelo(event.target.value)}
           className={SELECT_CLASS}
         >
           <option value="">Todos los modelos</option>
@@ -230,6 +352,40 @@ export default function Productos() {
           ))}
         </select>
       </div>
+
+      {filtrosActivos.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+            Filtros activos
+          </span>
+          {filtrosActivos.map((filtro) => (
+            <span
+              key={filtro.clave}
+              className="inline-flex items-center gap-1.5 rounded-full border border-primary-200 bg-primary-50 py-1 pl-3 pr-1.5 text-sm text-primary-700"
+            >
+              <span className="text-primary-500">{filtro.etiqueta}:</span>
+              <span className="font-medium">{filtro.valor}</span>
+              <button
+                type="button"
+                onClick={filtro.quitar}
+                aria-label={`Quitar filtro ${filtro.etiqueta}`}
+                className="flex h-5 w-5 items-center justify-center rounded-full text-primary-500 transition hover:bg-primary-200 hover:text-primary-800"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          {filtrosActivos.length > 1 && (
+            <button
+              type="button"
+              onClick={limpiarFiltros}
+              className="text-sm font-medium text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline"
+            >
+              Limpiar todo
+            </button>
+          )}
+        </div>
+      )}
 
       <Card className="mt-4 p-0 overflow-hidden">
         {loading && <p className="p-6 text-sm text-slate-500">Cargando productos...</p>}
@@ -313,24 +469,47 @@ export default function Productos() {
         )}
 
         {!loading && !error && totalCount > 0 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-sm text-slate-500">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-slate-100 text-sm text-slate-500">
             <span>
               {totalCount} producto{totalCount === 1 ? "" : "s"} — página {pagina + 1} de {totalPaginas}
             </span>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-1">
               <Button
                 variant="secondary"
                 size="sm"
                 disabled={pagina === 0}
-                onClick={() => setPagina((p) => p - 1)}
+                onClick={() => cambiarPagina(pagina - 1)}
               >
                 Anterior
               </Button>
+
+              {paginasVisibles.map((item, index) =>
+                item === "..." ? (
+                  <span key={`ellipsis-${index}`} className="px-1 text-slate-400">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => cambiarPagina(item)}
+                    aria-current={item === pagina ? "page" : undefined}
+                    className={`min-w-[2rem] rounded-lg px-2 py-1.5 text-sm font-medium transition ${
+                      item === pagina
+                        ? "bg-primary-600 text-white"
+                        : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {item + 1}
+                  </button>
+                )
+              )}
+
               <Button
                 variant="secondary"
                 size="sm"
                 disabled={pagina + 1 >= totalPaginas}
-                onClick={() => setPagina((p) => p + 1)}
+                onClick={() => cambiarPagina(pagina + 1)}
               >
                 Siguiente
               </Button>
