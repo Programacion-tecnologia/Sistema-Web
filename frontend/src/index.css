@@ -99,3 +99,19 @@ body {
     cursor: not-allowed;
   }
 }
+
+/* En pantallas chicas (móvil/tablet, < 1024px) las tablas scrollean en
+   horizontal dentro de su tarjeta en vez de cortarse. Se aplica al contenedor
+   directo de cada tabla via :has() (soportado en navegadores móviles actuales)
+   y se le da a la tabla su ancho natural para que las columnas no se apreten.
+   El desktop (>= 1024px) no se ve afectado. */
+@media (max-width: 1023px) {
+  div:has(> table) {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: max-content;
+  }
+}
