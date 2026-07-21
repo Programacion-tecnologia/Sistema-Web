@@ -36,6 +36,13 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         // El SPA sirve index.html para cualquier ruta del cliente.
         navigateFallback: 'index.html',
+        // Actualización confiable: el SW nuevo toma el control de inmediato y
+        // borra los caches viejos, para que un deploy nuevo no quede atascado
+        // sirviendo la version anterior (junto con registerType 'autoUpdate',
+        // que recarga la pagina al detectar la version nueva).
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
       },
       // Permite probar la PWA (manifest + service worker) también en `dev`.
       devOptions: {
