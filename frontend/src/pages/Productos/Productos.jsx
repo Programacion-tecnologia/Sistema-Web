@@ -512,7 +512,7 @@ export default function Productos() {
             <span>
               {totalCount} producto{totalCount === 1 ? "" : "s"} — página {pagina + 1} de {totalPaginas}
             </span>
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center justify-center gap-1">
               <Button
                 variant="secondary"
                 size="sm"
