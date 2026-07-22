@@ -460,11 +460,49 @@ export default function Ventas() {
         {ventasRecientes.length === 0 ? (
           <p className="p-5 text-sm text-slate-500">Todavía no hay ventas.</p>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-500 text-left">
-              <tr>
-                <th className="px-4 py-3 font-medium">Fecha</th>
-                <th className="px-4 py-3 font-medium">Cliente</th>
+          <>
+            {/* Móvil: tarjetas apiladas. */}
+            <div className="divide-y divide-slate-100 lg:hidden">
+              {ventasRecientes.map((v) => {
+                const totalVenta = v.items.reduce((s, it) => s + it.cantidad * it.precio_unitario, 0);
+                return (
+                  <button
+                    key={v.id}
+                    type="button"
+                    onClick={() => navigate(`/ventas/${v.id}`)}
+                    className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-medium text-slate-800 truncate">
+                        {v.cliente?.nombre ?? "Público general"}
+                      </p>
+                      <p className="mt-0.5 text-xs text-slate-500 truncate">
+                        {v.vendedor?.nombre ?? "—"} · {new Date(v.created_at).toLocaleString("es-PE")}
+                      </p>
+                      <span
+                        className={`mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                          v.estado === "anulada"
+                            ? "bg-danger-100 text-danger-700"
+                            : "bg-success-100 text-success-700"
+                        }`}
+                      >
+                        {v.estado === "anulada" ? "Anulada" : "Completada"}
+                      </span>
+                    </div>
+                    <p className="shrink-0 font-semibold text-slate-800">
+                      {formatearPrecio(totalVenta, v.moneda)}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Desktop: tabla completa. */}
+            <table className="hidden w-full text-sm lg:table">
+              <thead className="bg-slate-50 text-slate-500 text-left">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Fecha</th>
+                  <th className="px-4 py-3 font-medium">Cliente</th>
                 <th className="px-4 py-3 font-medium">Vendedor</th>
                 <th className="px-4 py-3 font-medium text-right">Total</th>
                 <th className="px-4 py-3 font-medium">Estado</th>
@@ -503,6 +541,7 @@ export default function Ventas() {
               })}
             </tbody>
           </table>
+          </>
         )}
       </Card>
     </>

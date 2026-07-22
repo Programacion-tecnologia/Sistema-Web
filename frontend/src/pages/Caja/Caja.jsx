@@ -264,10 +264,55 @@ export default function Caja() {
         {historial.length === 0 ? (
           <p className="p-5 text-sm text-slate-500">Todavía no hay sesiones de caja.</p>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-500 text-left">
-              <tr>
-                <th className="px-4 py-3 font-medium">Apertura</th>
+          <>
+            {/* Móvil: tarjetas apiladas. */}
+            <div className="divide-y divide-slate-100 lg:hidden">
+              {historial.map((s) => {
+                const colorDif =
+                  s.diferencia == null
+                    ? "text-slate-400"
+                    : Number(s.diferencia) === 0
+                      ? "text-success-700"
+                      : Number(s.diferencia) > 0
+                        ? "text-warning-700"
+                        : "text-danger-600";
+                return (
+                  <div key={s.id} className="px-4 py-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm text-slate-800">{formatearFecha(s.abierta_at)}</p>
+                        <p className="text-xs text-slate-400">Abrió: {s.abridor?.nombre ?? "—"}</p>
+                      </div>
+                      {s.estado === "abierta" ? (
+                        <span className="shrink-0 text-xs font-medium text-success-700">En curso</span>
+                      ) : (
+                        <p className={`shrink-0 text-sm font-semibold ${colorDif}`}>
+                          {s.diferencia != null ? formatearPrecio(s.diferencia, "PEN") : "—"}
+                        </p>
+                      )}
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500">
+                      <span>Inicial: {formatearPrecio(s.monto_inicial, "PEN")}</span>
+                      {s.monto_esperado != null && (
+                        <span>Esperado: {formatearPrecio(s.monto_esperado, "PEN")}</span>
+                      )}
+                      {s.monto_final_contado != null && (
+                        <span>Contado: {formatearPrecio(s.monto_final_contado, "PEN")}</span>
+                      )}
+                    </div>
+                    {s.estado !== "abierta" && (
+                      <p className="text-xs text-slate-400">Cerró: {s.cerrador?.nombre ?? "—"}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop: tabla completa. */}
+            <table className="hidden w-full text-sm lg:table">
+              <thead className="bg-slate-50 text-slate-500 text-left">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Apertura</th>
                 <th className="px-4 py-3 font-medium">Cierre</th>
                 <th className="px-4 py-3 font-medium text-right">Inicial</th>
                 <th className="px-4 py-3 font-medium text-right">Esperado</th>
@@ -322,6 +367,7 @@ export default function Caja() {
               ))}
             </tbody>
           </table>
+          </>
         )}
       </Card>
     </>

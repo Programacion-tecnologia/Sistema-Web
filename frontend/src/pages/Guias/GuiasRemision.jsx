@@ -44,8 +44,40 @@ export default function GuiasRemision() {
           <p className="p-6 text-sm text-slate-500">Todavía no hay guías de remisión emitidas.</p>
         )}
 
+        {/* Móvil: tarjetas apiladas. */}
         {!loading && !error && guias.length > 0 && (
-          <table className="w-full text-sm">
+          <div className="divide-y divide-slate-100 lg:hidden">
+            {guias.map((g) => (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => navigate(`/guias/${g.id}`)}
+                className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium text-slate-800">{numeroGuia(g)}</p>
+                  <p className="mt-0.5 text-sm text-slate-700 truncate">{g.destinatario_nombre}</p>
+                  <p className="text-xs text-slate-500 truncate">
+                    {g.motivo_traslado} · {g.fecha_emision}
+                  </p>
+                </div>
+                <span
+                  className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                    g.estado === "anulada"
+                      ? "bg-danger-100 text-danger-700"
+                      : "bg-success-100 text-success-700"
+                  }`}
+                >
+                  {g.estado === "anulada" ? "Anulada" : "Emitida"}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Desktop: tabla completa. */}
+        {!loading && !error && guias.length > 0 && (
+          <table className="hidden w-full text-sm lg:table">
             <thead className="bg-slate-50 text-slate-500 text-left">
               <tr>
                 <th className="px-4 py-3 font-medium">Número</th>

@@ -84,8 +84,41 @@ export default function Clientes() {
           </p>
         )}
 
+        {/* Móvil: tarjetas apiladas. */}
         {!loading && !error && clientesFiltrados.length > 0 && (
-          <table className="w-full text-sm">
+          <div className="divide-y divide-slate-100 lg:hidden">
+            {clientesFiltrados.map((cliente) => {
+              const resumen = resumenPorCliente.get(cliente.id);
+              return (
+                <button
+                  key={cliente.id}
+                  type="button"
+                  onClick={() => navigate(`/clientes/${cliente.id}`)}
+                  className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50"
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-800 truncate">{cliente.nombre}</p>
+                    <p className="mt-0.5 text-xs text-slate-500 truncate">
+                      {[cliente.ruc_dni, cliente.telefono].filter(Boolean).join(" · ") || "—"}
+                    </p>
+                    {resumen?.ultima && (
+                      <p className="text-xs text-slate-400">
+                        Última: {new Date(resumen.ultima).toLocaleDateString("es-PE")}
+                      </p>
+                    )}
+                  </div>
+                  <p className="shrink-0 text-xs text-slate-500">
+                    {resumen?.cantidad ?? 0} cotiz.
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Desktop: tabla completa. */}
+        {!loading && !error && clientesFiltrados.length > 0 && (
+          <table className="hidden w-full text-sm lg:table">
             <thead className="bg-slate-50 text-slate-500 text-left">
               <tr>
                 <th className="px-4 py-3 font-medium">Nombre</th>

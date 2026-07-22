@@ -138,8 +138,50 @@ export default function Inventario() {
           </p>
         )}
 
+        {/* Móvil: tarjetas apiladas con los stocks y las acciones. */}
         {!loading && !error && productos.length > 0 && (
-          <table className="w-full text-sm">
+          <div className="divide-y divide-slate-100 lg:hidden">
+            {productos.map((producto) => {
+              const necesitaReposicion =
+                producto.stock_minimo > 0 && producto.stock_disponible <= producto.stock_minimo;
+              return (
+                <div key={producto.id} className="px-4 py-3">
+                  <p className="font-medium text-slate-800 text-sm leading-snug">{producto.nombre}</p>
+                  {producto.codigo_referencia && (
+                    <p className="text-xs text-slate-400">CÓD: {producto.codigo_referencia}</p>
+                  )}
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-600">
+                    <span>
+                      Físico: <b className="text-slate-800">{producto.stock_fisico}</b>
+                    </span>
+                    <span>Reservado: {producto.stock_reservado}</span>
+                    <span className={STOCK_NIVEL_CLASS[getNivelStock(producto.stock_disponible)]}>
+                      Disponible: {producto.stock_disponible}
+                    </span>
+                    <span className={necesitaReposicion ? "text-warning-700 font-semibold" : ""}>
+                      Mínimo: {producto.stock_minimo || "—"}
+                      {necesitaReposicion && " · por reponer"}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex justify-end gap-2">
+                    <Button variant="secondary" size="sm" onClick={() => setKardexProducto(producto)}>
+                      Kardex
+                    </Button>
+                    {puedeAjustar && (
+                      <Button variant="secondary" size="sm" onClick={() => setAjusteProducto(producto)}>
+                        Ajustar
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Desktop: tabla completa. */}
+        {!loading && !error && productos.length > 0 && (
+          <table className="hidden w-full text-sm lg:table">
             <thead className="bg-slate-50 text-slate-500 text-left">
               <tr>
                 <th className="px-4 py-3 font-medium">Producto</th>
