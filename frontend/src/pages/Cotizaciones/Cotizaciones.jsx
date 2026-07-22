@@ -59,16 +59,16 @@ export default function Cotizaciones() {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h2 className="text-3xl font-bold">Cotizaciones</h2>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h2 className="text-2xl sm:text-3xl font-bold">Cotizaciones</h2>
 
         {puedeCrear && (
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <Link to="/cotizaciones/importar">
-              <Button variant="secondary">Agregar cotización manualmente</Button>
+              <Button variant="secondary" size="sm">Agregar manualmente</Button>
             </Link>
             <Link to="/cotizaciones/nuevo">
-              <Button>Nueva cotización</Button>
+              <Button size="sm">Nueva cotización</Button>
             </Link>
           </div>
         )}
@@ -96,8 +96,47 @@ export default function Cotizaciones() {
           </p>
         )}
 
+        {/* Móvil: tarjetas compactas apiladas (sin scroll lateral). */}
         {!loading && !error && cotizacionesFiltradas.length > 0 && (
-          <table className="w-full text-sm">
+          <div className="divide-y divide-slate-100 lg:hidden">
+            {cotizacionesFiltradas.map((cotizacion) => {
+              const vencimiento = vencimientoLabel(cotizacion);
+              return (
+                <button
+                  key={cotizacion.id}
+                  type="button"
+                  onClick={() => navigate(`/cotizaciones/${cotizacion.id}`)}
+                  className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50"
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-800 truncate">
+                      {cotizacion.cliente?.nombre ?? "—"}
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-500 truncate">
+                      {cotizacion.vendedor?.nombre ?? "—"} ·{" "}
+                      {new Date(cotizacion.created_at).toLocaleDateString("es-PE")}
+                    </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_BADGE_CLASS[cotizacion.estado]}`}
+                      >
+                        {ESTADO_LABEL[cotizacion.estado]}
+                      </span>
+                      {vencimiento && <span className="text-xs text-warning-600">{vencimiento}</span>}
+                    </div>
+                  </div>
+                  <p className="shrink-0 font-semibold text-slate-800">
+                    {formatearPrecio(calcularTotal(cotizacion.items), cotizacion.moneda)}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Desktop: tabla completa. */}
+        {!loading && !error && cotizacionesFiltradas.length > 0 && (
+          <table className="hidden w-full text-sm lg:table">
             <thead className="bg-slate-50 text-slate-500 text-left">
               <tr>
                 <th className="px-4 py-3 font-medium">Cliente</th>
