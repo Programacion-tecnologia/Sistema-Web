@@ -399,40 +399,58 @@ export default function Productos() {
           </p>
         )}
 
-        {/* Móvil: tarjetas compactas apiladas (sin scroll lateral). El toque
-            lleva al detalle, donde se edita/elimina. */}
+        {/* Móvil: tarjetas apiladas (sin scroll lateral) con toda la info y las
+            acciones. El nombre se ve completo (2 líneas), el toque en el cuerpo
+            lleva al detalle, y quedan visibles Editar/Eliminar. */}
         {!loading && !error && productos.length > 0 && (
           <div className="divide-y divide-slate-100 lg:hidden">
             {productos.map((producto) => (
-              <button
-                key={producto.id}
-                type="button"
-                onClick={() => navigate(`/productos/${producto.id}`)}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50"
-              >
-                <FotoProducto fotoUrl={producto.foto_url} nombre={producto.nombre} size="md" />
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-slate-800 truncate">{producto.nombre}</p>
-                  {producto.codigo_referencia && (
-                    <p className="text-xs text-slate-400 truncate">
-                      CÓD: {producto.codigo_referencia}
+              <div key={producto.id} className="px-4 py-3">
+                <div className="flex gap-3">
+                  <FotoProducto fotoUrl={producto.foto_url} nombre={producto.nombre} size="md" />
+                  <div
+                    className="min-w-0 flex-1 cursor-pointer"
+                    onClick={() => navigate(`/productos/${producto.id}`)}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-medium text-slate-800 text-sm leading-snug line-clamp-2">
+                        {producto.nombre}
+                      </p>
+                      <p className="shrink-0 text-sm font-semibold text-slate-800">
+                        {formatearPrecio(producto.precio_venta, producto.moneda)}
+                      </p>
+                    </div>
+                    {producto.codigo_referencia && (
+                      <p className="mt-0.5 text-xs text-slate-400">CÓD: {producto.codigo_referencia}</p>
+                    )}
+                    <p className="text-xs text-slate-500">
+                      {[producto.color, producto.modelo, producto.categoria?.nombre]
+                        .filter(Boolean)
+                        .join(" · ") || "—"}
                     </p>
+                    <p className={`text-xs ${STOCK_NIVEL_CLASS[getNivelStock(producto.stock_disponible)]}`}>
+                      Stock disponible: {producto.stock_disponible}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-2 flex justify-end gap-2">
+                  <Link to={`/productos/${producto.id}`}>
+                    <Button variant="secondary" size="sm">
+                      {puedeEscribir ? "Editar" : "Ver"}
+                    </Button>
+                  </Link>
+                  {puedeEliminar && (
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      disabled={eliminandoId === producto.id}
+                      onClick={() => handleEliminar(producto)}
+                    >
+                      {eliminandoId === producto.id ? "Eliminando..." : "Eliminar"}
+                    </Button>
                   )}
-                  <p className="text-xs text-slate-500 truncate">
-                    {[producto.color, producto.modelo, producto.categoria?.nombre]
-                      .filter(Boolean)
-                      .join(" · ") || "—"}
-                  </p>
                 </div>
-                <div className="shrink-0 text-right">
-                  <p className="font-semibold text-slate-800">
-                    {formatearPrecio(producto.precio_venta, producto.moneda)}
-                  </p>
-                  <p className={`text-xs ${STOCK_NIVEL_CLASS[getNivelStock(producto.stock_disponible)]}`}>
-                    Stock: {producto.stock_disponible}
-                  </p>
-                </div>
-              </button>
+              </div>
             ))}
           </div>
         )}
