@@ -45,8 +45,29 @@ export default function Scanner() {
           </p>
         )}
 
+        {/* Móvil: tarjetas apiladas. */}
         {!loading && !error && cotizaciones.length > 0 && (
-          <table className="w-full text-sm">
+          <div className="divide-y divide-slate-100 lg:hidden">
+            {cotizaciones.map((cotizacion) => (
+              <button
+                key={cotizacion.id}
+                type="button"
+                onClick={() => navigate(`/scanner/${cotizacion.id}`)}
+                className="block w-full px-4 py-3 text-left hover:bg-slate-50"
+              >
+                <p className="font-medium text-slate-800 truncate">{cotizacion.cliente?.nombre ?? "—"}</p>
+                <p className="mt-0.5 text-xs text-slate-500 truncate">
+                  {cotizacion.vendedor?.nombre ?? "—"} · Reservada{" "}
+                  {new Date(cotizacion.created_at).toLocaleDateString("es-PE")}
+                </p>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Desktop: tabla completa. */}
+        {!loading && !error && cotizaciones.length > 0 && (
+          <table className="hidden w-full text-sm lg:table">
             <thead className="bg-slate-50 text-slate-500 text-left">
               <tr>
                 <th className="px-4 py-3 font-medium">Cliente</th>

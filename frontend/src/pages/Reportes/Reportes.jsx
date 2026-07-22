@@ -359,11 +359,31 @@ export default function Reportes() {
             No hay productos con stock sin ventas en ese período. 🎉
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-slate-500 text-left">
-                <tr>
-                  <th className="py-2 font-medium">Producto</th>
+          <>
+            {/* Móvil: tarjetas apiladas. */}
+            <div className="divide-y divide-slate-100 lg:hidden">
+              {inmovilizado.slice(0, 30).map((p) => (
+                <div key={p.producto_id} className="flex items-start justify-between gap-3 py-2">
+                  <div className="min-w-0">
+                    <p className="text-sm text-slate-700 truncate">{p.nombre}</p>
+                    <p className="text-xs text-slate-500">
+                      Stock: {p.stock} · Última:{" "}
+                      {p.ultima_venta ? new Date(p.ultima_venta).toLocaleDateString("es-PE") : "Nunca"}
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-sm font-medium text-slate-800">
+                    {soles(p.costo_inmovilizado)}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop: tabla completa. */}
+            <div className="hidden overflow-x-auto lg:block">
+              <table className="w-full text-sm">
+                <thead className="text-slate-500 text-left">
+                  <tr>
+                    <th className="py-2 font-medium">Producto</th>
                   <th className="py-2 font-medium text-right">Stock</th>
                   <th className="py-2 font-medium text-right">Capital inmovilizado</th>
                   <th className="py-2 font-medium text-right">Última venta</th>
@@ -385,6 +405,7 @@ export default function Reportes() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
     </>

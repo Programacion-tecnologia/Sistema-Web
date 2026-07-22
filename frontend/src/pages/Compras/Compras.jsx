@@ -88,8 +88,39 @@ export default function Compras() {
           </p>
         )}
 
+        {/* Móvil: tarjetas apiladas. */}
         {!loading && !error && comprasFiltradas.length > 0 && (
-          <table className="w-full text-sm">
+          <div className="divide-y divide-slate-100 lg:hidden">
+            {comprasFiltradas.map((compra) => (
+              <button
+                key={compra.id}
+                type="button"
+                onClick={() => navigate(`/compras/${compra.id}`)}
+                className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium text-slate-800 truncate">{compra.proveedor?.nombre ?? "—"}</p>
+                  <p className="mt-0.5 text-xs text-slate-500 truncate">
+                    {compra.creador?.nombre ?? "—"} ·{" "}
+                    {new Date(compra.created_at).toLocaleDateString("es-PE")}
+                  </p>
+                  <span
+                    className={`mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_BADGE_CLASS[compra.estado]}`}
+                  >
+                    {ESTADO_LABEL[compra.estado]}
+                  </span>
+                </div>
+                <p className="shrink-0 font-semibold text-slate-800">
+                  {formatearPrecio(calcularTotal(compra.items), compra.moneda)}
+                </p>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Desktop: tabla completa. */}
+        {!loading && !error && comprasFiltradas.length > 0 && (
+          <table className="hidden w-full text-sm lg:table">
             <thead className="bg-slate-50 text-slate-500 text-left">
               <tr>
                 <th className="px-4 py-3 font-medium">Proveedor</th>

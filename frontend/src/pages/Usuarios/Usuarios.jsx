@@ -137,8 +137,39 @@ export default function Usuarios() {
         {loading && <p className="p-6 text-sm text-slate-500">Cargando usuarios...</p>}
         {error && <p className="p-6 text-sm text-danger-600">{error}</p>}
 
+        {/* Móvil: tarjetas apiladas con el selector de rol visible. */}
         {!loading && !error && (
-          <table className="w-full text-sm">
+          <div className="divide-y divide-slate-100 lg:hidden">
+            {usuarios.map((usuario) => (
+              <div key={usuario.id} className="px-4 py-3">
+                <p className="font-medium text-slate-800">{usuario.nombre}</p>
+                <p className="text-xs text-slate-500 truncate">{usuario.email}</p>
+                <p className="text-xs text-slate-400">
+                  Desde {new Date(usuario.created_at).toLocaleDateString("es-PE")}
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-xs text-slate-500">Rol:</span>
+                  <select
+                    value={usuario.rol}
+                    disabled={cambiandoRolId === usuario.id || usuario.id === user.id}
+                    onChange={(event) => handleCambiarRol(usuario.id, event.target.value)}
+                    className="rounded border border-slate-300 px-2 py-1 text-sm"
+                  >
+                    {OPCIONES_ROL.map((rol) => (
+                      <option key={rol} value={rol}>
+                        {ROL_LABEL[rol]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Desktop: tabla completa. */}
+        {!loading && !error && (
+          <table className="hidden w-full text-sm lg:table">
             <thead className="bg-slate-50 text-slate-500 text-left">
               <tr>
                 <th className="px-4 py-3 font-medium">Nombre</th>
