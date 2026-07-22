@@ -181,7 +181,7 @@ export default function CotizacionImportarPdf() {
 
   return (
     <>
-      <h2 className="text-3xl font-bold">Importar cotización desde PDF</h2>
+      <h2 className="text-2xl sm:text-3xl font-bold">Importar cotización desde PDF</h2>
       <p className="mt-1 text-sm text-slate-500">
         Para cotizaciones ya acordadas con el cliente en otro sistema (ej. Mifact) — se extraen los
         productos y cantidades automáticamente, pero siempre revisá la lista antes de confirmar.
@@ -190,7 +190,7 @@ export default function CotizacionImportarPdf() {
       <Card className="mt-6 max-w-3xl space-y-6">
         <div>
           <p className="text-sm font-medium text-slate-700 mb-2">1. Archivo PDF</p>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <input
               type="file"
               accept="application/pdf"
@@ -255,7 +255,83 @@ export default function CotizacionImportarPdf() {
                   texto extraído para ver qué pasó.
                 </p>
               ) : (
-                <table className="w-full text-sm">
+                <>
+                  {/* Móvil: cada ítem como bloque — el nombre usa todo el ancho
+                      (no se apretuja) y abajo van los inputs + subtotal + quitar. */}
+                  <div className="divide-y divide-slate-100 lg:hidden">
+                    {items.map((item, index) => (
+                      <div
+                        key={item.key}
+                        className={`py-3 ${!item.producto_id ? "rounded-lg bg-danger-50 px-2" : ""}`}
+                      >
+                        {item.producto_id ? (
+                          <>
+                            <p className="text-sm font-medium text-slate-800">{item.nombre}</p>
+                            <p className="text-xs text-slate-400">
+                              CÓDIGO REF: {item.codigo_pdf} — {item.descripcion_pdf}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <select
+                              value=""
+                              onChange={(event) => asignarProducto(index, event.target.value)}
+                              className={INPUT_CLASS}
+                            >
+                              <option value="">No encontrado — asignar producto...</option>
+                              {productosDisponibles.map((producto) => (
+                                <option key={producto.id} value={producto.id}>
+                                  {producto.nombre}
+                                </option>
+                              ))}
+                            </select>
+                            <p className="mt-1 text-xs text-danger-600">
+                              Código "{item.codigo_pdf}" no encontrado — {item.descripcion_pdf}
+                            </p>
+                          </>
+                        )}
+                        <div className="mt-2 flex flex-wrap items-end gap-3">
+                          <div>
+                            <label className="block text-xs text-slate-500 mb-0.5">Cantidad</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.cantidad}
+                              onChange={(event) => actualizarCantidad(index, event.target.value)}
+                              className="w-20 rounded border border-slate-300 px-2 py-1 text-right text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-500 mb-0.5">Precio unit.</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.precio_unitario}
+                              onChange={(event) => actualizarPrecio(index, event.target.value)}
+                              className="w-24 rounded border border-slate-300 px-2 py-1 text-right text-sm"
+                            />
+                          </div>
+                          <div className="ml-auto text-right">
+                            <p className="text-xs text-slate-500">Subtotal</p>
+                            <p className="font-medium text-slate-800">
+                              {formatearPrecio(item.cantidad * item.precio_unitario, moneda)}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => quitarItem(index)}
+                            className="pb-1 text-xs text-danger-600 hover:underline"
+                          >
+                            Quitar
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop: tabla. */}
+                  <table className="hidden w-full text-sm lg:table">
                   <thead className="text-slate-500 text-left">
                     <tr>
                       <th className="py-2 font-medium">Producto</th>
@@ -331,6 +407,7 @@ export default function CotizacionImportarPdf() {
                     ))}
                   </tbody>
                 </table>
+                </>
               )}
 
               {items.length > 0 && (
