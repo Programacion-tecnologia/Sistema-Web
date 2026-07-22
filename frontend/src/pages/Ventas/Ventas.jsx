@@ -4,10 +4,12 @@ import { buscarProductosPaginado } from "../../services/productosService";
 import { listClientes } from "../../services/clientesService";
 import { getCajaAbierta } from "../../services/cajaService";
 import { listVentas, registrarVenta } from "../../services/ventasService";
+import { getPreciosOfertaVigentes } from "../../services/promocionesService";
 import { useAuth } from "../../hooks/useAuth";
 import { ROLES } from "../../utils/roles";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
+import ChipOferta from "../../components/Ofertas/ChipOferta";
 import { formatearPrecio } from "../../utils/currency";
 import { METODOS_PAGO, METODO_PAGO_LABEL } from "../../utils/pagoMetodo";
 
@@ -47,6 +49,9 @@ export default function Ventas() {
 
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState(null);
+  // Mapa producto_id -> precio de oferta vigente: la linea del carrito arranca
+  // a ese precio (editable) cuando el producto esta en promocion.
+  const [ofertas, setOfertas] = useState(new Map());
 
   useEffect(() => {
     getCajaAbierta()
@@ -58,6 +63,9 @@ export default function Ventas() {
       .catch(() => {});
     listVentas()
       .then((data) => setVentasRecientes(data.slice(0, 8)))
+      .catch(() => {});
+    getPreciosOfertaVigentes()
+      .then(setOfertas)
       .catch(() => {});
   }, []);
 
@@ -95,6 +103,9 @@ export default function Ventas() {
           l.producto_id === producto.id ? { ...l, cantidad: l.cantidad + 1 } : l
         );
       }
+      const precioLista = Number(producto.precio_venta) || 0;
+      const precioOferta = ofertas.get(producto.id);
+      const enOferta = precioOferta !== undefined && precioOferta < precioLista;
       return [
         ...prev,
         {
@@ -102,7 +113,9 @@ export default function Ventas() {
           nombre: producto.nombre,
           codigo: producto.codigo_referencia,
           cantidad: 1,
-          precio_unitario: Number(producto.precio_venta) || 0,
+          precio_unitario: enOferta ? precioOferta : precioLista,
+          precio_lista: precioLista,
+          en_oferta: enOferta,
           stock_disponible: producto.stock_disponible,
         },
       ];
@@ -282,7 +295,12 @@ export default function Ventas() {
                 <div className="divide-y divide-slate-100 lg:hidden">
                   {carrito.map((l) => (
                     <div key={l.producto_id} className="py-3">
-                      <p className="text-sm font-medium text-slate-800">{l.nombre}</p>
+                      <p className="text-sm font-medium text-slate-800">
+                        {l.nombre}
+                        {l.en_oferta && (
+                          <ChipOferta precioLista={l.precio_lista} precioActual={l.precio_unitario} />
+                        )}
+                      </p>
                       {l.cantidad > l.stock_disponible && (
                         <p className="text-xs text-danger-600">
                           Solo hay {l.stock_disponible} disponibles
@@ -348,6 +366,9 @@ export default function Ventas() {
                     <tr key={l.producto_id}>
                       <td className="py-2">
                         <span className="font-medium text-slate-800">{l.nombre}</span>
+                        {l.en_oferta && (
+                          <ChipOferta precioLista={l.precio_lista} precioActual={l.precio_unitario} />
+                        )}
                         {l.cantidad > l.stock_disponible && (
                           <span className="block text-xs text-danger-600">
                             Solo hay {l.stock_disponible} disponibles

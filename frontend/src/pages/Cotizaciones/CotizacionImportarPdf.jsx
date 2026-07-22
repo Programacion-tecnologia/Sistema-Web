@@ -4,10 +4,27 @@ import { analizarPdfCotizacion } from "../../services/pdfCotizacionImportService
 import { createCotizacion } from "../../services/cotizacionesService";
 import { findOrCreateCliente, listClientes } from "../../services/clientesService";
 import { listProductos } from "../../services/productosService";
+import { getPreciosOfertaVigentes } from "../../services/promocionesService";
 import { useAuth } from "../../hooks/useAuth";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
+import ChipOferta from "../../components/Ofertas/ChipOferta";
 import { formatearPrecio } from "../../utils/currency";
+
+// Dado un producto (o null) y el mapa de ofertas vigentes, devuelve con que
+// precio arrancar la linea. precioPdf es el precio que ya trae la linea (del
+// PDF o el actual); la oferta solo se aplica si es MENOR (nunca sube el precio).
+function resolverPrecioLinea(producto, ofertas, precioPdf) {
+  if (!producto) return { precio: precioPdf, precioLista: null, enOferta: false };
+  const lista = Number(producto.precio_venta) || 0;
+  const oferta = ofertas.get(producto.id);
+  const enOferta = oferta !== undefined && oferta < lista && (precioPdf == null || oferta < precioPdf);
+  return {
+    precio: enOferta ? oferta : precioPdf ?? lista,
+    precioLista: lista,
+    enOferta,
+  };
+}
 
 const INPUT_CLASS =
   "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500";
@@ -48,10 +65,14 @@ export default function CotizacionImportarPdf() {
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  // Mapa producto_id -> precio de oferta vigente (aplica si es menor al precio
+  // del PDF/lista).
+  const [ofertas, setOfertas] = useState(new Map());
 
   useEffect(() => {
     listClientes().then(setClientes).catch(() => {});
     listProductos().then(setProductos).catch(() => {});
+    getPreciosOfertaVigentes().then(setOfertas).catch(() => {});
   }, []);
 
   const productosDisponibles = useMemo(
@@ -83,12 +104,19 @@ export default function CotizacionImportarPdf() {
       setItems(
         itemsCrudos.map((item) => {
           const producto = mapaCodigos.get(item.codigo_pdf.trim().toUpperCase()) ?? null;
+          const { precio, precioLista, enOferta } = resolverPrecioLinea(
+            producto,
+            ofertas,
+            item.precio_unitario
+          );
           return {
             key: nuevaKey(),
             codigo_pdf: item.codigo_pdf,
             descripcion_pdf: item.descripcion_pdf,
             cantidad: item.cantidad,
-            precio_unitario: item.precio_unitario,
+            precio_unitario: precio,
+            precio_lista: precioLista,
+            en_oferta: enOferta,
             producto_id: producto?.id ?? null,
             nombre: producto?.nombre ?? null,
           };
@@ -108,9 +136,24 @@ export default function CotizacionImportarPdf() {
   const asignarProducto = (index, productoId) => {
     const producto = productos.find((p) => p.id === productoId);
     setItems((prev) =>
-      prev.map((item, i) =>
-        i === index ? { ...item, producto_id: producto?.id ?? null, nombre: producto?.nombre ?? null } : item
-      )
+      prev.map((item, i) => {
+        if (i !== index) return item;
+        // Al asignar un producto a una linea sin match, si esta en oferta se
+        // arranca al precio de oferta (si es menor al que ya tenia la linea).
+        const { precio, precioLista, enOferta } = resolverPrecioLinea(
+          producto,
+          ofertas,
+          item.precio_unitario
+        );
+        return {
+          ...item,
+          producto_id: producto?.id ?? null,
+          nombre: producto?.nombre ?? null,
+          precio_unitario: precio,
+          precio_lista: precioLista,
+          en_oferta: enOferta,
+        };
+      })
     );
   };
 
@@ -133,6 +176,7 @@ export default function CotizacionImportarPdf() {
     if (!producto) return;
 
     const cantidad = Math.max(1, Math.trunc(Number(cantidadManual)) || 1);
+    const { precio, precioLista, enOferta } = resolverPrecioLinea(producto, ofertas, null);
     setItems((prev) => [
       ...prev,
       {
@@ -140,7 +184,9 @@ export default function CotizacionImportarPdf() {
         codigo_pdf: "—",
         descripcion_pdf: "Agregado manualmente",
         cantidad,
-        precio_unitario: producto.precio_venta,
+        precio_unitario: precio,
+        precio_lista: precioLista,
+        en_oferta: enOferta,
         producto_id: producto.id,
         nombre: producto.nombre,
       },
@@ -266,7 +312,15 @@ export default function CotizacionImportarPdf() {
                       >
                         {item.producto_id ? (
                           <>
-                            <p className="text-sm font-medium text-slate-800">{item.nombre}</p>
+                            <p className="text-sm font-medium text-slate-800">
+                              {item.nombre}
+                              {item.en_oferta && (
+                                <ChipOferta
+                                  precioLista={item.precio_lista}
+                                  precioActual={item.precio_unitario}
+                                />
+                              )}
+                            </p>
                             <p className="text-xs text-slate-400">
                               CÓDIGO REF: {item.codigo_pdf} — {item.descripcion_pdf}
                             </p>
@@ -347,7 +401,15 @@ export default function CotizacionImportarPdf() {
                         <td className="py-2">
                           {item.producto_id ? (
                             <>
-                              <p className="font-medium text-slate-800">{item.nombre}</p>
+                              <p className="font-medium text-slate-800">
+                                {item.nombre}
+                                {item.en_oferta && (
+                                  <ChipOferta
+                                    precioLista={item.precio_lista}
+                                    precioActual={item.precio_unitario}
+                                  />
+                                )}
+                              </p>
                               <p className="text-xs text-slate-400">
                                 CÓDIGO REF: {item.codigo_pdf} — {item.descripcion_pdf}
                               </p>

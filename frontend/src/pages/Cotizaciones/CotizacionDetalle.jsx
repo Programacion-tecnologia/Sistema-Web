@@ -11,6 +11,8 @@ import {
 } from "../../services/cotizacionesService";
 import { findOrCreateCliente, listClientes } from "../../services/clientesService";
 import { listProductos } from "../../services/productosService";
+import { getPreciosOfertaVigentes } from "../../services/promocionesService";
+import ChipOferta from "../../components/Ofertas/ChipOferta";
 import { useAuth } from "../../hooks/useAuth";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
@@ -52,11 +54,15 @@ export default function CotizacionDetalle() {
   const [cantidadNueva, setCantidadNueva] = useState("1");
   const [busquedaProducto, setBusquedaProducto] = useState("");
   const [mostrarResultados, setMostrarResultados] = useState(false);
+  // Mapa producto_id -> precio de oferta vigente: la linea arranca a ese precio
+  // (editable) cuando el producto esta en promocion.
+  const [ofertas, setOfertas] = useState(new Map());
 
   useEffect(() => {
     if (modoEdicion) return;
     listClientes().then(setClientes).catch(() => {});
     listProductos().then(setProductos).catch(() => {});
+    getPreciosOfertaVigentes().then(setOfertas).catch(() => {});
   }, [modoEdicion]);
 
   useEffect(() => {
@@ -110,6 +116,8 @@ export default function CotizacionDetalle() {
     if (!producto) return;
 
     const cantidad = Math.max(1, Math.trunc(Number(cantidadNueva)) || 1);
+    const precioOferta = ofertas.get(producto.id);
+    const enOferta = precioOferta !== undefined && precioOferta < producto.precio_venta;
     setItems((prev) => [
       ...prev,
       {
@@ -117,7 +125,9 @@ export default function CotizacionDetalle() {
         nombre: producto.nombre,
         stock_disponible: producto.stock_disponible,
         cantidad,
-        precio_unitario: producto.precio_venta,
+        precio_unitario: enOferta ? precioOferta : producto.precio_venta,
+        precio_lista: producto.precio_venta,
+        en_oferta: enOferta,
       },
     ]);
     setProductoSeleccionado("");
@@ -462,7 +472,12 @@ export default function CotizacionDetalle() {
               <div className="divide-y divide-slate-100 lg:hidden">
                 {items.map((item, index) => (
                   <div key={`${item.producto_id}-${index}`} className="py-3">
-                    <p className="text-sm font-medium text-slate-800">{item.nombre}</p>
+                    <p className="text-sm font-medium text-slate-800">
+                      {item.nombre}
+                      {item.en_oferta && (
+                        <ChipOferta precioLista={item.precio_lista} precioActual={item.precio_unitario} />
+                      )}
+                    </p>
                     {item.cantidad > item.stock_disponible && (
                       <p className={`text-xs ${STOCK_NIVEL_CLASS[getNivelStock(item.stock_disponible)]}`}>
                         Solo hay {item.stock_disponible} disponibles
@@ -524,6 +539,9 @@ export default function CotizacionDetalle() {
                     <tr key={`${item.producto_id}-${index}`}>
                       <td className="py-2">
                         {item.nombre}
+                        {item.en_oferta && (
+                          <ChipOferta precioLista={item.precio_lista} precioActual={item.precio_unitario} />
+                        )}
                         {item.cantidad > item.stock_disponible && (
                           <span className={`block text-xs ${STOCK_NIVEL_CLASS[getNivelStock(item.stock_disponible)]}`}>
                             Solo hay {item.stock_disponible} disponibles

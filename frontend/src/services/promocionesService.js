@@ -105,3 +105,27 @@ export async function listOfertasVigentes() {
   if (error) throw error;
   return data ?? [];
 }
+
+// Mapa producto_id -> precio_oferta de las ofertas vigentes AHORA. Lo usan los
+// flujos de venta (POV, cotizacion manual y cotizacion PDF) para arrancar la
+// linea al precio de oferta en vez del precio de lista. Si un producto cae en
+// dos promos vigentes a la vez, se queda con el precio mas bajo.
+export async function getPreciosOfertaVigentes() {
+  const ahora = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from("promocion_productos")
+    .select("producto_id, precio_oferta, promocion:promociones!inner(activa, fecha_inicio, fecha_fin)")
+    .eq("promocion.activa", true)
+    .lte("promocion.fecha_inicio", ahora)
+    .gte("promocion.fecha_fin", ahora);
+
+  if (error) throw error;
+
+  const mapa = new Map();
+  for (const row of data ?? []) {
+    const prev = mapa.get(row.producto_id);
+    if (prev === undefined || row.precio_oferta < prev) mapa.set(row.producto_id, row.precio_oferta);
+  }
+  return mapa;
+}
