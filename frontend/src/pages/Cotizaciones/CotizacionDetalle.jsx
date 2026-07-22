@@ -245,7 +245,25 @@ export default function CotizacionDetalle() {
             </div>
           </dl>
 
-          <table className="w-full text-sm mb-4">
+          {/* Móvil: cada ítem como bloque (nombre a todo el ancho + cantidad×precio y subtotal). */}
+          <div className="mb-4 divide-y divide-slate-100 lg:hidden">
+            {cotizacion.items.map((item) => (
+              <div key={item.id} className="py-2">
+                <p className="text-sm font-medium text-slate-800">{item.producto?.nombre ?? "—"}</p>
+                <div className="mt-1 flex items-end gap-3 text-sm">
+                  <span className="text-slate-600">
+                    {item.cantidad} × {formatearPrecio(item.precio_unitario, cotizacion.moneda)}
+                  </span>
+                  <span className="ml-auto font-medium text-slate-800">
+                    {formatearPrecio(item.cantidad * item.precio_unitario, cotizacion.moneda)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: tabla. */}
+          <table className="mb-4 hidden w-full text-sm lg:table">
             <thead className="text-slate-500 text-left">
               <tr>
                 <th className="py-2 font-medium">Producto</th>
@@ -439,62 +457,115 @@ export default function CotizacionDetalle() {
           </div>
 
           {items.length > 0 && (
-            <table className="w-full text-sm">
-              <thead className="text-slate-500 text-left">
-                <tr>
-                  <th className="py-2 font-medium">Producto</th>
-                  <th className="py-2 font-medium text-right">Cantidad</th>
-                  <th className="py-2 font-medium text-right">Precio unit.</th>
-                  <th className="py-2 font-medium text-right">Subtotal</th>
-                  <th className="py-2"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
+            <>
+              {/* Móvil: cada ítem como bloque (nombre a todo el ancho + inputs y quitar). */}
+              <div className="divide-y divide-slate-100 lg:hidden">
                 {items.map((item, index) => (
-                  <tr key={`${item.producto_id}-${index}`}>
-                    <td className="py-2">
-                      {item.nombre}
-                      {item.cantidad > item.stock_disponible && (
-                        <span className={`block text-xs ${STOCK_NIVEL_CLASS[getNivelStock(item.stock_disponible)]}`}>
-                          Solo hay {item.stock_disponible} disponibles
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-2 text-right">
-                      <input
-                        type="number"
-                        min="1"
-                        value={item.cantidad}
-                        onChange={(event) => actualizarCantidadItem(index, event.target.value)}
-                        className="w-20 rounded border border-slate-300 px-2 py-1 text-right text-sm"
-                      />
-                    </td>
-                    <td className="py-2 text-right">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.precio_unitario}
-                        onChange={(event) => actualizarPrecioItem(index, event.target.value)}
-                        className="w-24 rounded border border-slate-300 px-2 py-1 text-right text-sm"
-                      />
-                    </td>
-                    <td className="py-2 text-right">
-                      {formatearPrecio(item.cantidad * item.precio_unitario, moneda)}
-                    </td>
-                    <td className="py-2 text-right">
+                  <div key={`${item.producto_id}-${index}`} className="py-3">
+                    <p className="text-sm font-medium text-slate-800">{item.nombre}</p>
+                    {item.cantidad > item.stock_disponible && (
+                      <p className={`text-xs ${STOCK_NIVEL_CLASS[getNivelStock(item.stock_disponible)]}`}>
+                        Solo hay {item.stock_disponible} disponibles
+                      </p>
+                    )}
+                    <div className="mt-2 flex flex-wrap items-end gap-3">
+                      <div>
+                        <label className="block text-xs text-slate-500 mb-0.5">Cantidad</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.cantidad}
+                          onChange={(event) => actualizarCantidadItem(index, event.target.value)}
+                          className="w-20 rounded border border-slate-300 px-2 py-1 text-right text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-slate-500 mb-0.5">Precio unit.</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={item.precio_unitario}
+                          onChange={(event) => actualizarPrecioItem(index, event.target.value)}
+                          className="w-24 rounded border border-slate-300 px-2 py-1 text-right text-sm"
+                        />
+                      </div>
+                      <div className="ml-auto text-right">
+                        <p className="text-xs text-slate-500">Subtotal</p>
+                        <p className="font-medium text-slate-800">
+                          {formatearPrecio(item.cantidad * item.precio_unitario, moneda)}
+                        </p>
+                      </div>
                       <button
                         type="button"
                         onClick={() => quitarItem(index)}
-                        className="text-xs text-danger-600 hover:underline"
+                        className="pb-1 text-xs text-danger-600 hover:underline"
                       >
                         Quitar
                       </button>
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+
+              {/* Desktop: tabla. */}
+              <table className="hidden w-full text-sm lg:table">
+                <thead className="text-slate-500 text-left">
+                  <tr>
+                    <th className="py-2 font-medium">Producto</th>
+                    <th className="py-2 font-medium text-right">Cantidad</th>
+                    <th className="py-2 font-medium text-right">Precio unit.</th>
+                    <th className="py-2 font-medium text-right">Subtotal</th>
+                    <th className="py-2"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {items.map((item, index) => (
+                    <tr key={`${item.producto_id}-${index}`}>
+                      <td className="py-2">
+                        {item.nombre}
+                        {item.cantidad > item.stock_disponible && (
+                          <span className={`block text-xs ${STOCK_NIVEL_CLASS[getNivelStock(item.stock_disponible)]}`}>
+                            Solo hay {item.stock_disponible} disponibles
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2 text-right">
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.cantidad}
+                          onChange={(event) => actualizarCantidadItem(index, event.target.value)}
+                          className="w-20 rounded border border-slate-300 px-2 py-1 text-right text-sm"
+                        />
+                      </td>
+                      <td className="py-2 text-right">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={item.precio_unitario}
+                          onChange={(event) => actualizarPrecioItem(index, event.target.value)}
+                          className="w-24 rounded border border-slate-300 px-2 py-1 text-right text-sm"
+                        />
+                      </td>
+                      <td className="py-2 text-right">
+                        {formatearPrecio(item.cantidad * item.precio_unitario, moneda)}
+                      </td>
+                      <td className="py-2 text-right">
+                        <button
+                          type="button"
+                          onClick={() => quitarItem(index)}
+                          className="text-xs text-danger-600 hover:underline"
+                        >
+                          Quitar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
           )}
 
           {items.length > 0 && (

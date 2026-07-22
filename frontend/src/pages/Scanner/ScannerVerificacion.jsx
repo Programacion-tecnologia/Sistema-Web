@@ -179,7 +179,36 @@ export default function ScannerVerificacion() {
           </div>
         )}
 
-        <table className="w-full text-sm mb-4">
+        {/* Móvil: cada línea como bloque (nombre a todo el ancho + escaneado/pedido y estado). */}
+        <div className="mb-4 divide-y divide-slate-100 lg:hidden">
+          {lineas.map((linea) => {
+            const estado = getEstadoLinea(linea.cantidad_escaneada, linea.cantidad_pedida);
+            return (
+              <div key={linea.producto_id} className={`px-2 py-3 ${ESTADO_LINEA_ROW_CLASS[estado]}`}>
+                <p className="font-medium text-slate-800">{linea.nombre}</p>
+                {linea.codigo_referencia && (
+                  <p className="text-xs text-slate-400">CÓDIGO REF: {linea.codigo_referencia}</p>
+                )}
+                {linea.codigo_barras && (
+                  <p className="text-xs text-slate-400">CÓDIGO BARRAS: {linea.codigo_barras}</p>
+                )}
+                <div className="mt-1 flex items-center gap-3 text-sm">
+                  <span className="text-slate-600">
+                    {linea.cantidad_escaneada} / {linea.cantidad_pedida}
+                  </span>
+                  <span
+                    className={`ml-auto inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${ESTADO_LINEA_BADGE_CLASS[estado]}`}
+                  >
+                    {ESTADO_LINEA_LABEL[estado]}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop: tabla. */}
+        <table className="mb-4 hidden w-full text-sm lg:table">
           <thead className="text-slate-500 text-left">
             <tr>
               <th className="py-2 font-medium">Producto</th>

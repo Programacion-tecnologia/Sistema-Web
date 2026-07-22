@@ -113,7 +113,24 @@ export default function GuiaDetalle() {
           <Dato label="Emitida por" valor={guia.creador?.nombre} />
         </dl>
 
-        <table className="w-full text-sm mt-6">
+        {/* Móvil: cada ítem como bloque (descripción a todo el ancho + código/cantidad/U.M.). */}
+        <div className="mt-6 divide-y divide-slate-100 lg:hidden">
+          {guia.items.map((it) => (
+            <div key={it.id} className="py-2">
+              <p className="text-sm font-medium text-slate-800">{it.descripcion}</p>
+              <div className="mt-1 flex flex-wrap items-end gap-x-4 gap-y-0.5 text-xs text-slate-500">
+                <span>Código: {it.codigo ?? "—"}</span>
+                <span>U.M.: {it.unidad ?? "—"}</span>
+                <span className="ml-auto text-sm font-medium text-slate-800">
+                  {it.cantidad}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop: tabla. */}
+        <table className="mt-6 hidden w-full text-sm lg:table">
           <thead className="text-slate-500 text-left">
             <tr>
               <th className="py-2 font-medium">Descripción</th>

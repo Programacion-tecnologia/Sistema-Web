@@ -276,7 +276,64 @@ export default function Ventas() {
                 Buscá productos arriba para agregarlos a la venta.
               </p>
             ) : (
-              <table className="w-full text-sm">
+              <>
+                {/* Móvil: cada línea como bloque (nombre a todo el ancho +
+                    inputs cantidad/precio + subtotal + quitar). */}
+                <div className="divide-y divide-slate-100 lg:hidden">
+                  {carrito.map((l) => (
+                    <div key={l.producto_id} className="py-3">
+                      <p className="text-sm font-medium text-slate-800">{l.nombre}</p>
+                      {l.cantidad > l.stock_disponible && (
+                        <p className="text-xs text-danger-600">
+                          Solo hay {l.stock_disponible} disponibles
+                        </p>
+                      )}
+                      <div className="mt-2 flex flex-wrap items-end gap-3">
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-0.5">Cantidad</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={l.cantidad}
+                            onChange={(event) =>
+                              actualizarLinea(l.producto_id, "cantidad", event.target.value)
+                            }
+                            className="w-16 rounded border border-slate-300 px-2 py-1 text-right"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-slate-500 mb-0.5">Precio</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={l.precio_unitario}
+                            onChange={(event) =>
+                              actualizarLinea(l.producto_id, "precio", event.target.value)
+                            }
+                            className="w-24 rounded border border-slate-300 px-2 py-1 text-right"
+                          />
+                        </div>
+                        <div className="ml-auto text-right">
+                          <p className="text-xs text-slate-500">Subtotal</p>
+                          <p className="font-medium text-slate-800">
+                            {formatearPrecio(l.cantidad * l.precio_unitario, moneda)}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => quitarLinea(l.producto_id)}
+                          className="pb-1 text-xs text-danger-600 hover:underline"
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop: tabla. */}
+                <table className="hidden w-full text-sm lg:table">
                 <thead className="text-slate-500 text-left">
                   <tr>
                     <th className="py-2 font-medium">Producto</th>
@@ -336,6 +393,7 @@ export default function Ventas() {
                   ))}
                 </tbody>
               </table>
+              </>
             )}
           </Card>
         </div>

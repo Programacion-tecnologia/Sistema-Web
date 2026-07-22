@@ -178,7 +178,28 @@ export default function VentaDetalle() {
           )}
         </dl>
 
-        <table className="w-full text-sm mb-4">
+        {/* Móvil: cada ítem como bloque (nombre a todo el ancho + cantidad×precio y subtotal). */}
+        <div className="mb-4 divide-y divide-slate-100 lg:hidden">
+          {venta.items.map((it) => (
+            <div key={it.id} className="py-2">
+              <p className="text-sm font-medium text-slate-800">{it.producto?.nombre ?? "—"}</p>
+              {it.producto?.codigo_referencia && (
+                <p className="text-xs text-slate-400">{it.producto.codigo_referencia}</p>
+              )}
+              <div className="mt-1 flex items-end gap-3 text-sm">
+                <span className="text-slate-600">
+                  {it.cantidad} × {formatearPrecio(it.precio_unitario, venta.moneda)}
+                </span>
+                <span className="ml-auto font-medium text-slate-800">
+                  {formatearPrecio(it.cantidad * it.precio_unitario, venta.moneda)}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop: tabla. */}
+        <table className="mb-4 hidden w-full text-sm lg:table">
           <thead className="text-slate-500 text-left">
             <tr>
               <th className="py-2 font-medium">Producto</th>
