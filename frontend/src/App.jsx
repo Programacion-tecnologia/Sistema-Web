@@ -22,6 +22,8 @@ import Proveedores from "./pages/Proveedores/Proveedores";
 import ProveedorDetalle from "./pages/Proveedores/ProveedorDetalle";
 import Cotizaciones from "./pages/Cotizaciones/Cotizaciones";
 import CotizacionDetalle from "./pages/Cotizaciones/CotizacionDetalle";
+import Ofertas from "./pages/Ofertas/Ofertas";
+import PromocionDetalle from "./pages/Ofertas/PromocionDetalle";
 import Scanner from "./pages/Scanner/Scanner";
 import Reportes from "./pages/Reportes/Reportes";
 import Usuarios from "./pages/Usuarios/Usuarios";
@@ -117,6 +119,14 @@ function App() {
               />
             </Route>
             <Route path="cotizaciones/:id" element={<CotizacionDetalle />} />
+
+            {/* Ofertas: el showcase lo ve todo rol logueado; crear/editar
+                promociones queda gateado a Admin/Gerencia (UI + RLS real). */}
+            <Route path="ofertas" element={<Ofertas />} />
+            <Route element={<RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.GERENCIA]} />}>
+              <Route path="ofertas/nueva" element={<PromocionDetalle />} />
+              <Route path="ofertas/:id" element={<PromocionDetalle />} />
+            </Route>
 
             <Route element={<RoleProtectedRoute roles={[ROLES.ALMACEN, ROLES.GERENCIA, ROLES.ADMIN]} />}>
               <Route path="scanner" element={<Scanner />} />

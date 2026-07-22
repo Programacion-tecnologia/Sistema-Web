@@ -15,6 +15,7 @@ const MENU = [
   { path: "/clientes", label: "Clientes" },
   { path: "/proveedores", label: "Proveedores" },
   { path: "/cotizaciones", label: "Cotizaciones" },
+  { path: "/ofertas", label: "Ofertas" },
   { path: "/scanner", label: "Scanner", roles: [ROLES.ALMACEN, ROLES.GERENCIA, ROLES.ADMIN] },
   { path: "/reportes", label: "Reportes", roles: [ROLES.ADMIN, ROLES.GERENCIA] },
   { path: "/usuarios", label: "Usuarios", roles: [ROLES.ADMIN] },
