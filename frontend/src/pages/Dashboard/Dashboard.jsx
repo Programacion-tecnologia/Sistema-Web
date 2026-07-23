@@ -8,10 +8,12 @@ import {
   contarCotizacionesPorEstado,
   calcularValorInventario,
   listarActividadReciente,
+  obtenerVentasPorMes,
 } from "../../services/dashboardService";
 import { useAuth } from "../../hooks/useAuth";
 import Card from "../../components/Card/Card";
 import StatTile from "../../components/Dashboard/StatTile";
+import VentasPorMesChart from "../../components/Dashboard/VentasPorMesChart";
 import { ESTADO_LABEL, ESTADO_BARRA_CLASS } from "../../utils/cotizacionEstado";
 import { formatearPrecio } from "../../utils/currency";
 
@@ -51,6 +53,9 @@ export default function Dashboard() {
       contarCotizacionesPorEstado(),
       calcularValorInventario(rol),
       listarActividadReciente(),
+      // Tolerante a fallos: si la RPC 0024 aún no se corrió, el gráfico muestra
+      // su estado vacío en vez de tumbar todo el Dashboard.
+      obtenerVentasPorMes().catch(() => []),
     ])
       .then(
         ([
@@ -62,6 +67,7 @@ export default function Dashboard() {
           porEstado,
           valorInventario,
           actividadReciente,
+          ventasPorMes,
         ]) => {
           if (!activo) return;
           setDatos({
@@ -73,6 +79,7 @@ export default function Dashboard() {
             porEstado,
             valorInventario,
             actividadReciente,
+            ventasPorMes,
           });
         }
       )
@@ -101,6 +108,7 @@ export default function Dashboard() {
     porEstado,
     valorInventario,
     actividadReciente,
+    ventasPorMes,
   } = datos;
 
   const totalCotizaciones = Object.values(porEstado).reduce((a, b) => a + b, 0);
@@ -168,6 +176,10 @@ export default function Dashboard() {
           }
         />
       </div>
+
+      <Card className="mt-8">
+        <VentasPorMesChart data={ventasPorMes} />
+      </Card>
 
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>

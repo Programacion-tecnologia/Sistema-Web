@@ -23,6 +23,14 @@ function sumarMontosPorMoneda(cotizaciones) {
   return totales;
 }
 
+// Últimos 12 meses de ventas (PEN, completadas) para el gráfico del Dashboard.
+// Devuelve [{ mes: 'YYYY-MM', total: number }] con los meses sin ventas en 0.
+export async function obtenerVentasPorMes() {
+  const { data, error } = await supabase.rpc("ventas_por_mes");
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function contarCotizacionesPendientes() {
   const { count, error } = await supabase
     .from("cotizaciones")
