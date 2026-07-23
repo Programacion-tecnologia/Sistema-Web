@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Button from "../Button/Button";
-import { imprimirRotulos } from "../../utils/rotuloImprimible";
+import { imprimirRotulos, descargarRotulosPDF } from "../../utils/rotuloImprimible";
 import { numeroGuia } from "../../utils/guiaImprimible";
 
 const INPUT_CLASS =
@@ -41,21 +41,32 @@ function Campo({ label, valor, onChange, ancho = "" }) {
 
 export default function RotuloEnvioModal({ guia, config, onCerrar }) {
   const [datos, setDatos] = useState(() => valoresIniciales(guia, config));
+  const [generandoPdf, setGenerandoPdf] = useState(false);
 
   const set = (campo) => (valor) => setDatos((prev) => ({ ...prev, [campo]: valor }));
 
   const totalBultos = Math.max(1, Math.trunc(Number(datos.cantTotal)) || 1);
 
-  const imprimirUno = () => imprimirRotulos([datos], config);
-
   // Un rótulo por bulto: 1/N, 2/N, ... para pegar en cada caja.
-  const imprimirPorBulto = () => {
-    const labels = Array.from({ length: totalBultos }, (_, i) => ({
+  const labelsPorBulto = () =>
+    Array.from({ length: totalBultos }, (_, i) => ({
       ...datos,
       cantActual: String(i + 1),
       cantTotal: String(totalBultos),
     }));
-    imprimirRotulos(labels, config);
+
+  const imprimirUno = () => imprimirRotulos([datos], config);
+  const imprimirPorBulto = () => imprimirRotulos(labelsPorBulto(), config);
+
+  const descargarPdf = async () => {
+    setGenerandoPdf(true);
+    try {
+      const labels = totalBultos > 1 ? labelsPorBulto() : [datos];
+      const nombre = `rotulo-${String(datos.nroGuiaInt || datos.atencion || "envio").replace(/[^\w-]+/g, "_")}`;
+      await descargarRotulosPDF(labels, config, nombre);
+    } finally {
+      setGenerandoPdf(false);
+    }
   };
 
   return (
@@ -120,6 +131,9 @@ export default function RotuloEnvioModal({ guia, config, onCerrar }) {
         <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-100 px-5 py-3">
           <Button variant="secondary" onClick={onCerrar}>
             Cerrar
+          </Button>
+          <Button variant="secondary" disabled={generandoPdf} onClick={descargarPdf}>
+            {generandoPdf ? "Generando..." : totalBultos > 1 ? `Descargar PDF (${totalBultos})` : "Descargar PDF"}
           </Button>
           {totalBultos > 1 && (
             <Button variant="secondary" onClick={imprimirPorBulto}>

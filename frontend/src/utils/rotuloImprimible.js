@@ -6,6 +6,9 @@
 // `datos` (editables antes de imprimir); logo/marcas salen de config. Pensado
 // para impresora térmica de etiquetas (sticker), por eso @page sin márgenes.
 
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
+
 function esc(v) {
   return String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 }
@@ -28,7 +31,7 @@ function icono(nombre, size, color = "#0f172a") {
 // URL absoluta del escudo (public/escudo-peru.jpg): la ventana de impresión es
 // about:blank, así que necesita el origen completo para resolver la imagen.
 function escudoUrl() {
-  return typeof window !== "undefined" ? `${window.location.origin}/escudo-peru.jpg` : "/escudo-peru.jpg";
+  return typeof window !== "undefined" ? `${window.location.origin}/escudo-peru.png` : "/escudo-peru.png";
 }
 
 // HTML de UN rótulo (una etiqueta). Se repite por bulto si hace falta.
@@ -37,58 +40,59 @@ export function construirRotuloHTML(datos, config) {
   const d = datos ?? {};
 
   const logo = c.logo_url
-    ? `<img src="${esc(c.logo_url)}" alt="logo" style="max-height:40px;max-width:150px;object-fit:contain" />`
-    : `<div style="font-weight:800;font-size:16px">${esc(c.razon_social || "")}</div>`;
+    ? `<img src="${esc(c.logo_url)}" alt="logo" style="max-height:66px;max-width:230px;object-fit:contain" />`
+    : `<div style="font-weight:800;font-size:22px">${esc(c.razon_social || "")}</div>`;
   const marcas = c.marcas_url
-    ? `<img src="${esc(c.marcas_url)}" alt="marcas" style="max-height:14px;max-width:150px;object-fit:contain;display:block;margin-top:3px" />`
+    ? `<img src="${esc(c.marcas_url)}" alt="marcas" style="max-height:20px;max-width:230px;object-fit:contain;display:block;margin-top:4px" />`
     : "";
 
-  // Bandera con el escudo del Perú centrado sobre la banda blanca.
-  const bandera = `<div style="display:flex;width:112px;height:64px;border:1px solid #334155;flex:0 0 auto">
+  // Emblema redondo: escudo del Perú centrado con bandas rojas a los lados,
+  // recortado en círculo (como el modelo físico).
+  const bandera = `<div style="width:74px;height:74px;border-radius:50%;overflow:hidden;border:1px solid #334155;display:flex;flex:0 0 auto">
     <div style="flex:1;background:#d91023"></div>
-    <div style="flex:1.5;background:#fff;display:flex;align-items:center;justify-content:center;padding:2px">
-      <img src="${escudoUrl()}" alt="escudo" style="max-height:60px;max-width:100%;object-fit:contain" />
+    <div style="flex:1.5;background:#fff;display:flex;align-items:center;justify-content:center">
+      <img src="${escudoUrl()}" alt="escudo" style="max-height:58px;max-width:100%;object-fit:contain" />
     </div>
     <div style="flex:1;background:#d91023"></div>
   </div>`;
 
   return `<div class="rotulo">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;flex:0 0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex:0 0 auto">
       ${bandera}
       <div style="text-align:right">${logo}${marcas}</div>
     </div>
 
-    <div style="border:1.5px solid #0f172a;border-radius:8px;padding:8px 12px;margin-bottom:7px;flex:1.9;display:flex;flex-direction:column;justify-content:center">
+    <div style="border:1.5px solid #0f172a;border-radius:8px;padding:7px 14px;margin-bottom:5px;flex:1.9;min-height:0;overflow:hidden;display:flex;flex-direction:column;justify-content:space-around">
       <div style="display:flex;align-items:baseline;gap:8px">
-        <span style="font-size:11px;color:#334155;flex:0 0 70px">DESTINO:</span>
-        <span style="font-size:17px;font-weight:700;line-height:1.1">${esc(d.destino)}</span>
+        <span style="font-size:11px;color:#334155;flex:0 0 72px">DESTINO:</span>
+        <span style="font-size:18px;font-weight:700;line-height:1.1">${esc(d.destino)}</span>
       </div>
-      <div style="display:flex;align-items:baseline;gap:8px;margin-top:8px">
-        <span style="font-size:11px;color:#334155;flex:0 0 70px">ATENCIÓN:</span>
-        <span style="font-size:25px;font-weight:800;line-height:1.05">${esc(d.atencion)}</span>
+      <div style="display:flex;align-items:baseline;gap:8px">
+        <span style="font-size:11px;color:#334155;flex:0 0 72px">ATENCIÓN:</span>
+        <span style="font-size:22px;font-weight:800;line-height:1.05">${esc(d.atencion)}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;gap:12px;margin-top:10px;font-size:13px">
+      <div style="display:flex;justify-content:space-between;gap:12px;font-size:13px">
         <span style="display:inline-flex;align-items:center;gap:5px">${icono("idCard", 16)} Nro DNI/RUC: <b>${esc(d.doc)}</b></span>
         <span style="display:inline-flex;align-items:center;gap:5px">${icono("phone", 13)} Nro tel: <b>${esc(d.telefono)}</b></span>
       </div>
     </div>
 
-    <div style="border:1.5px solid #0f172a;border-radius:8px;padding:8px 12px;margin-bottom:7px;flex:1.3;display:flex;flex-direction:column;justify-content:center">
+    <div style="border:1.5px solid #0f172a;border-radius:8px;padding:7px 14px;margin-bottom:5px;flex:1.25;min-height:0;overflow:hidden;display:flex;flex-direction:column;justify-content:space-around">
       <div style="display:flex;align-items:center;gap:8px">
-        <span style="flex:0 0 70px;display:flex;flex-direction:column;align-items:flex-start;gap:3px">
+        <span style="flex:0 0 72px;display:flex;flex-direction:column;align-items:flex-start;gap:2px">
           <span style="font-size:11px;color:#334155">AGENCIA:</span>
           ${icono("truck", 30)}
         </span>
         <span style="font-size:21px;font-weight:800;line-height:1.1">${esc(d.agencia)}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;gap:10px;margin-top:9px;font-size:12px">
+      <div style="display:flex;justify-content:space-between;gap:10px;font-size:12px">
         <span>CANT: <b>${esc(d.cantActual)} / ${esc(d.cantTotal)}</b></span>
         <span>NRO GUÍA INT: <b>${esc(d.nroGuiaInt)}</b></span>
         <span>NRO GUÍA AGENCIA: <b>${esc(d.nroGuiaAgencia)}</b></span>
       </div>
     </div>
 
-    <div style="border:1.5px solid #0f172a;border-radius:8px;padding:7px 12px;margin-bottom:7px;font-size:11px;display:flex;justify-content:space-between;gap:12px;flex:0 0 auto">
+    <div style="border:1.5px solid #0f172a;border-radius:8px;padding:7px 14px;margin-bottom:5px;font-size:12px;display:flex;justify-content:space-between;gap:12px;flex:0 0 auto">
       <span>ENVÍA: <b>${esc(d.envia)}</b>${d.enviaRuc ? ` / RUC ${esc(d.enviaRuc)}` : ""}</span>
       <span style="display:inline-flex;align-items:center;gap:5px">${icono("user", 13)} VENDE: <b>${esc(d.vende)}</b>${d.vendeTel ? ` &nbsp;${esc(d.vendeTel)}` : ""}</span>
     </div>
@@ -114,7 +118,7 @@ export function imprimirRotulos(labels, config) {
       *{box-sizing:border-box}
       @page{size:150mm 100mm;margin:0}
       body{margin:0;font-family:system-ui,Arial,sans-serif;color:#0f172a}
-      .rotulo{width:150mm;height:100mm;padding:4mm;overflow:hidden;page-break-after:always;display:flex;flex-direction:column}
+      .rotulo{width:150mm;height:100mm;padding:3mm;overflow:hidden;page-break-after:always;display:flex;flex-direction:column}
       .rotulo:last-child{page-break-after:auto}
     </style></head><body>${cuerpos}
     <script>window.onload=function(){window.print()}</script></body></html>`;
@@ -124,4 +128,37 @@ export function imprimirRotulos(labels, config) {
     win.document.write(html);
     win.document.close();
   }
+}
+
+// Renderiza UN rótulo fuera de pantalla (a 15x10 cm) y lo captura a canvas para
+// meterlo en el PDF conservando escudo, logo e íconos tal cual se imprimen.
+async function rotuloACanvas(datos, config) {
+  const cont = document.createElement("div");
+  cont.style.cssText = "position:fixed;left:-10000px;top:0;background:#fff";
+  cont.innerHTML = construirRotuloHTML(datos, config);
+  const rot = cont.firstElementChild;
+  // El .rotulo del print window trae estos estilos por CSS; acá los fijamos
+  // inline para que el render fuera de pantalla tenga el tamaño exacto.
+  rot.style.cssText +=
+    ";width:150mm;height:100mm;padding:3mm;overflow:hidden;display:flex;flex-direction:column;font-family:system-ui,Arial,sans-serif;color:#0f172a;background:#fff";
+  document.body.appendChild(cont);
+  try {
+    return await html2canvas(rot, { scale: 3, useCORS: true, backgroundColor: "#ffffff" });
+  } finally {
+    document.body.removeChild(cont);
+  }
+}
+
+// Descarga uno o varios rótulos como un PDF de páginas 15x10 cm (una por bulto).
+export async function descargarRotulosPDF(labels, config, nombreArchivo = "rotulo") {
+  const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: [150, 100] });
+
+  for (let i = 0; i < labels.length; i++) {
+    const canvas = await rotuloACanvas(labels[i], config);
+    const img = canvas.toDataURL("image/jpeg", 0.92);
+    if (i > 0) pdf.addPage([150, 100], "landscape");
+    pdf.addImage(img, "JPEG", 0, 0, 150, 100);
+  }
+
+  pdf.save(`${nombreArchivo}.pdf`);
 }
