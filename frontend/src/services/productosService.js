@@ -129,6 +129,7 @@ export async function buscarProductosPaginado({
   marcaId = "",
   modelos = null,
   porReponer = false,
+  sinCodigoBarras = false,
 }) {
   // modelos: variantes de texto del modelo elegido a las que restringir el
   // listado (ej. ["CRF230F"]), resueltas en el cliente contra el dropdown.
@@ -155,6 +156,10 @@ export async function buscarProductosPaginado({
     // necesita_reposicion es la columna calculada de 0015 (stock_minimo > 0 y
     // stock_disponible <= stock_minimo): el filtro se resuelve en el servidor.
     consulta = consulta.eq("necesita_reposicion", true);
+  }
+  if (sinCodigoBarras) {
+    // Productos sin código de barras cargado (para el módulo de códigos).
+    consulta = consulta.is("codigo_barras", null);
   }
   if (modelos !== null) {
     // Cada .or() es un filtro top-level independiente: PostgREST los combina

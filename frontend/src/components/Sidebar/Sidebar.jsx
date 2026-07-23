@@ -17,6 +17,7 @@ const MENU = [
   { path: "/cotizaciones", label: "Cotizaciones" },
   { path: "/ofertas", label: "Ofertas" },
   { path: "/scanner", label: "Scanner", roles: [ROLES.ALMACEN, ROLES.GERENCIA, ROLES.ADMIN] },
+  { path: "/codigos-barras", label: "Códigos de barras", roles: [ROLES.ADMIN, ROLES.GERENCIA] },
   { path: "/reportes", label: "Reportes", roles: [ROLES.ADMIN, ROLES.GERENCIA] },
   { path: "/usuarios", label: "Usuarios", roles: [ROLES.ADMIN] },
   { path: "/configuracion", label: "Configuración" },

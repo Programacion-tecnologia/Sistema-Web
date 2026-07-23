@@ -24,6 +24,7 @@ import Cotizaciones from "./pages/Cotizaciones/Cotizaciones";
 import CotizacionDetalle from "./pages/Cotizaciones/CotizacionDetalle";
 import Ofertas from "./pages/Ofertas/Ofertas";
 import PromocionDetalle from "./pages/Ofertas/PromocionDetalle";
+import CodigosBarras from "./pages/CodigosBarras/CodigosBarras";
 import Scanner from "./pages/Scanner/Scanner";
 import Reportes from "./pages/Reportes/Reportes";
 import Usuarios from "./pages/Usuarios/Usuarios";
@@ -142,6 +143,7 @@ function App() {
 
             <Route element={<RoleProtectedRoute roles={[ROLES.ADMIN, ROLES.GERENCIA]} />}>
               <Route path="reportes" element={<Reportes />} />
+              <Route path="codigos-barras" element={<CodigosBarras />} />
             </Route>
 
             <Route element={<RoleProtectedRoute roles={[ROLES.ADMIN]} />}>

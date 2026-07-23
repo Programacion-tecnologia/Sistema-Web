@@ -12,6 +12,7 @@ import {
 import { findOrCreateCliente, listClientes } from "../../services/clientesService";
 import { listProductos } from "../../services/productosService";
 import { getPreciosOfertaVigentes } from "../../services/promocionesService";
+import { generarCodigoBarras } from "../../services/codigosBarrasService";
 import ChipOferta from "../../components/Ofertas/ChipOferta";
 import { useAuth } from "../../hooks/useAuth";
 import Card from "../../components/Card/Card";
@@ -128,6 +129,7 @@ export default function CotizacionDetalle() {
         precio_unitario: enOferta ? precioOferta : producto.precio_venta,
         precio_lista: producto.precio_venta,
         en_oferta: enOferta,
+        codigo_barras: producto.codigo_barras,
       },
     ]);
     setProductoSeleccionado("");
@@ -137,6 +139,18 @@ export default function CotizacionDetalle() {
 
   const quitarItem = (index) => {
     setItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Genera un EAN-13 para un producto sin código de barras y lo marca en la línea.
+  const generarCodigoItem = async (index) => {
+    const item = items[index];
+    if (!item?.producto_id) return;
+    try {
+      const codigo = await generarCodigoBarras(item.producto_id);
+      setItems((prev) => prev.map((it, i) => (i === index ? { ...it, codigo_barras: codigo } : it)));
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const actualizarCantidadItem = (index, cantidad) => {
@@ -478,6 +492,15 @@ export default function CotizacionDetalle() {
                         <ChipOferta precioLista={item.precio_lista} precioActual={item.precio_unitario} />
                       )}
                     </p>
+                    {!item.codigo_barras && (
+                      <button
+                        type="button"
+                        onClick={() => generarCodigoItem(index)}
+                        className="text-xs font-medium text-primary-600 hover:underline"
+                      >
+                        Sin código · Generar código de barras
+                      </button>
+                    )}
                     {item.cantidad > item.stock_disponible && (
                       <p className={`text-xs ${STOCK_NIVEL_CLASS[getNivelStock(item.stock_disponible)]}`}>
                         Solo hay {item.stock_disponible} disponibles
@@ -541,6 +564,15 @@ export default function CotizacionDetalle() {
                         {item.nombre}
                         {item.en_oferta && (
                           <ChipOferta precioLista={item.precio_lista} precioActual={item.precio_unitario} />
+                        )}
+                        {!item.codigo_barras && (
+                          <button
+                            type="button"
+                            onClick={() => generarCodigoItem(index)}
+                            className="block text-xs font-medium text-primary-600 hover:underline"
+                          >
+                            Sin código · Generar código de barras
+                          </button>
                         )}
                         {item.cantidad > item.stock_disponible && (
                           <span className={`block text-xs ${STOCK_NIVEL_CLASS[getNivelStock(item.stock_disponible)]}`}>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getCotizacionParaVerificar, verificarDespachoCotizacion } from "../../services/scannerService";
+import { asignarCodigoBarras, generarCodigoBarras } from "../../services/codigosBarrasService";
 import { generarPdfVerificacion } from "../../utils/pdfVerificacion";
 import { getEstadoLinea, ESTADO_LINEA_LABEL, ESTADO_LINEA_ROW_CLASS, ESTADO_LINEA_BADGE_CLASS } from "../../utils/scannerEstado";
 import { useAuth } from "../../hooks/useAuth";
@@ -8,6 +9,11 @@ import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
 import EscanerInput from "../../components/Scanner/EscanerInput";
 import EscanerCamara from "../../components/Scanner/EscanerCamara";
+
+// Normaliza un código para comparar el escaneo contra los del producto: ignora
+// espacios de borde y mayúsculas, así el código de referencia matchea aunque
+// venga con diferencias mínimas.
+const normalizarCodigo = (s) => String(s ?? "").trim().toUpperCase();
 
 export default function ScannerVerificacion() {
   const { id } = useParams();
@@ -29,6 +35,12 @@ export default function ScannerVerificacion() {
   const [detalleParaPdf, setDetalleParaPdf] = useState(null);
   const [pdfError, setPdfError] = useState(null);
   const avisoTimeoutRef = useRef(null);
+  // Asignar al vuelo el código escaneado a un producto del pedido que no lo tiene.
+  const [codigoPendiente, setCodigoPendiente] = useState(null);
+  const [productoAsignar, setProductoAsignar] = useState("");
+  const [asignando, setAsignando] = useState(false);
+  const [asignarError, setAsignarError] = useState(null);
+  const [generandoId, setGenerandoId] = useState(null);
 
   useEffect(() => {
     let activo = true;
@@ -65,18 +77,63 @@ export default function ScannerVerificacion() {
   };
 
   const registrarEscaneo = (codigo) => {
-    setLineas((prev) => {
-      const idx = prev.findIndex(
-        (linea) => linea.codigo_referencia === codigo || linea.codigo_barras === codigo
-      );
-      if (idx === -1) {
-        mostrarAviso(`El código "${codigo}" no corresponde a este pedido.`);
-        return prev;
-      }
-      return prev.map((linea, i) =>
+    const norm = normalizarCodigo(codigo);
+    const idx = lineas.findIndex(
+      (linea) =>
+        normalizarCodigo(linea.codigo_referencia) === norm ||
+        normalizarCodigo(linea.codigo_barras) === norm
+    );
+    if (idx === -1) {
+      // No matchea: en vez de solo avisar, se ofrece asignar el código a un
+      // producto del pedido (típicamente uno que aún no tiene código de barras).
+      setCodigoPendiente(codigo.trim());
+      setAsignarError(null);
+      const sinCodigo = lineas.find((l) => !l.codigo_barras);
+      setProductoAsignar(sinCodigo?.producto_id ?? lineas[0]?.producto_id ?? "");
+      return;
+    }
+    setLineas((prev) =>
+      prev.map((linea, i) =>
         i === idx ? { ...linea, cantidad_escaneada: linea.cantidad_escaneada + 1 } : linea
+      )
+    );
+  };
+
+  // Asigna el código pendiente al producto elegido y cuenta el escaneo.
+  const asignarAProducto = async () => {
+    if (!codigoPendiente || !productoAsignar) return;
+    setAsignando(true);
+    setAsignarError(null);
+    try {
+      const guardado = await asignarCodigoBarras(productoAsignar, codigoPendiente);
+      setLineas((prev) =>
+        prev.map((l) =>
+          l.producto_id === productoAsignar
+            ? { ...l, codigo_barras: guardado, cantidad_escaneada: l.cantidad_escaneada + 1 }
+            : l
+        )
       );
-    });
+      mostrarAviso("Código asignado y registrado.");
+      setCodigoPendiente(null);
+    } catch (err) {
+      setAsignarError(err.message);
+    } finally {
+      setAsignando(false);
+    }
+  };
+
+  // Genera un EAN-13 para un producto del pedido que no tiene código.
+  const generarParaLinea = async (productoId) => {
+    setGenerandoId(productoId);
+    setAsignarError(null);
+    try {
+      const codigo = await generarCodigoBarras(productoId);
+      setLineas((prev) => prev.map((l) => (l.producto_id === productoId ? { ...l, codigo_barras: codigo } : l)));
+    } catch (err) {
+      mostrarAviso(err.message);
+    } finally {
+      setGenerandoId(null);
+    }
   };
 
   const puedeFinalizar = lineas.length > 0 && lineas.every((linea) => linea.cantidad_escaneada > 0);
@@ -175,7 +232,41 @@ export default function ScannerVerificacion() {
                 <EscanerCamara onScan={registrarEscaneo} />
               </div>
             )}
-            {aviso && <p className="mt-2 text-sm text-danger-600">{aviso}</p>}
+            {aviso && <p className="mt-2 text-sm text-slate-600">{aviso}</p>}
+
+            {codigoPendiente && (
+              <div className="mt-3 rounded-lg border border-warning-200 bg-warning-50 p-3">
+                <p className="text-sm text-slate-700">
+                  El código <span className="font-mono font-semibold">{codigoPendiente}</span> no está en
+                  ningún producto del pedido. Asignalo al producto correcto (se guarda en el producto):
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <select
+                    value={productoAsignar}
+                    onChange={(e) => setProductoAsignar(e.target.value)}
+                    className="min-w-[12rem] flex-1 rounded border border-slate-300 px-2 py-1 text-sm"
+                  >
+                    {lineas.map((l) => (
+                      <option key={l.producto_id} value={l.producto_id}>
+                        {l.nombre}
+                        {l.codigo_barras ? " (ya tiene código)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <Button size="sm" disabled={asignando} onClick={asignarAProducto}>
+                    {asignando ? "Asignando..." : "Asignar y registrar"}
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => setCodigoPendiente(null)}
+                    className="text-xs text-slate-500 hover:underline"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+                {asignarError && <p className="mt-2 text-xs text-danger-600">{asignarError}</p>}
+              </div>
+            )}
           </div>
         )}
 
@@ -189,8 +280,17 @@ export default function ScannerVerificacion() {
                 {linea.codigo_referencia && (
                   <p className="text-xs text-slate-400">CÓDIGO REF: {linea.codigo_referencia}</p>
                 )}
-                {linea.codigo_barras && (
+                {linea.codigo_barras ? (
                   <p className="text-xs text-slate-400">CÓDIGO BARRAS: {linea.codigo_barras}</p>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={generandoId === linea.producto_id}
+                    onClick={() => generarParaLinea(linea.producto_id)}
+                    className="text-xs font-medium text-primary-600 hover:underline disabled:opacity-50"
+                  >
+                    {generandoId === linea.producto_id ? "Generando..." : "Generar código de barras"}
+                  </button>
                 )}
                 <div className="mt-1 flex items-center gap-3 text-sm">
                   <span className="text-slate-600">
@@ -226,8 +326,17 @@ export default function ScannerVerificacion() {
                     {linea.codigo_referencia && (
                       <p className="text-xs text-slate-400">CÓDIGO REF: {linea.codigo_referencia}</p>
                     )}
-                    {linea.codigo_barras && (
+                    {linea.codigo_barras ? (
                       <p className="text-xs text-slate-400">CÓDIGO BARRAS: {linea.codigo_barras}</p>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={generandoId === linea.producto_id}
+                        onClick={() => generarParaLinea(linea.producto_id)}
+                        className="text-xs font-medium text-primary-600 hover:underline disabled:opacity-50"
+                      >
+                        {generandoId === linea.producto_id ? "Generando..." : "Generar código de barras"}
+                      </button>
                     )}
                   </td>
                   <td className="py-2 text-right">
