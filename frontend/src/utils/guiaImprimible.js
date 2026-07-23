@@ -43,8 +43,8 @@ function motivoMarcado(std, motivo) {
 
 function casilla(std, motivo) {
   const marcado = motivoMarcado(std, motivo);
-  return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10px">
-    <span style="display:inline-block;width:11px;height:11px;border:1px solid #334155;text-align:center;line-height:10px;font-size:9px">${marcado ? "✔" : ""}</span>
+  return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:8px">
+    <span style="display:inline-block;width:9px;height:9px;border:1px solid #334155;text-align:center;line-height:8px;font-size:8px">${marcado ? "✔" : ""}</span>
     ${esc(std)}
   </span>`;
 }
@@ -55,8 +55,8 @@ export function construirGuiaHTML(guia, config) {
   const c = config ?? {};
   const numero = numeroGuia(guia);
   const logo = c.logo_url
-    ? `<img src="${esc(c.logo_url)}" alt="logo" style="max-height:96px;max-width:210px;object-fit:contain" />`
-    : `<div style="font-weight:800;font-size:18px">${esc(c.razon_social || "")}</div>`;
+    ? `<img src="${esc(c.logo_url)}" alt="logo" style="max-height:52px;max-width:140px;object-fit:contain" />`
+    : `<div style="font-weight:800;font-size:13px">${esc(c.razon_social || "")}</div>`;
 
   const filas = guia.items
     .map(
@@ -73,31 +73,31 @@ export function construirGuiaHTML(guia, config) {
   const checkboxes = MOTIVOS_STD.map((m) => `<div style="width:48%;padding:2px 0">${casilla(m, guia.motivo_traslado)}</div>`).join("");
 
   return `
-    <table style="width:100%;border:none;margin:0 0 8px">
+    <table style="width:100%;border:none;margin:0 0 5px">
       <tr>
-        <td style="border:none;width:210px;vertical-align:top;text-align:center">${logo}</td>
-        <td style="border:none;text-align:center;vertical-align:top;padding-top:6px">
-          <div style="font-weight:800;font-size:15px">${esc(c.razon_social || "")}</div>
-          <div style="font-size:10px;color:#334155">${esc(c.direccion_fiscal || "")}</div>
-          <div style="font-size:10px;color:#334155">${c.telefonos ? "Telf: " + esc(c.telefonos) : ""}</div>
+        <td style="border:none;width:150px;vertical-align:top;text-align:center">${logo}</td>
+        <td style="border:none;text-align:center;vertical-align:top;padding-top:3px">
+          <div style="font-weight:800;font-size:11px">${esc(c.razon_social || "")}</div>
+          <div style="font-size:8px;color:#334155">${esc(c.direccion_fiscal || "")}</div>
+          <div style="font-size:8px;color:#334155">${c.telefonos ? "Telf: " + esc(c.telefonos) : ""}</div>
         </td>
-        <td style="border:none;width:235px;vertical-align:top">
-          <div style="border:1.5px solid #0f172a;border-radius:10px;padding:8px 14px;text-align:center">
-            <div style="font-weight:800">R.U.C. ${esc(c.ruc || "")}</div>
-            <div style="font-weight:700;margin-top:4px;font-size:11px">GUÍA DE REMISIÓN<br/>REMITENTE</div>
-            <div style="font-weight:800;font-size:14px;margin-top:4px">N° ${esc(numero)}</div>
+        <td style="border:none;width:165px;vertical-align:top">
+          <div style="border:1.5px solid #0f172a;border-radius:8px;padding:6px 10px;text-align:center">
+            <div style="font-weight:800;font-size:9px">R.U.C. ${esc(c.ruc || "")}</div>
+            <div style="font-weight:700;margin-top:3px;font-size:8px">GUÍA DE REMISIÓN<br/>REMITENTE</div>
+            <div style="font-weight:800;font-size:11px;margin-top:3px">N° ${esc(numero)}</div>
           </div>
         </td>
       </tr>
     </table>
 
-    ${guia.estado === "anulada" ? '<div style="color:#dc2626;font-weight:800;font-size:16px;text-align:center;margin-bottom:6px">— ANULADA —</div>' : ""}
+    ${guia.estado === "anulada" ? '<div style="color:#dc2626;font-weight:800;font-size:13px;text-align:center;margin-bottom:4px">— ANULADA —</div>' : ""}
 
-    <div style="border-top:2px solid #0f172a;padding-top:8px;font-size:11px">
+    <div style="border-top:2px solid #0f172a;padding-top:5px;font-size:9px">
       <b>Fecha de inicio de traslado:</b> ${esc(guia.fecha_traslado || guia.fecha_emision)}
     </div>
 
-    <table style="width:100%;border:none;margin:6px 0;font-size:11px">
+    <table style="width:100%;border:none;margin:4px 0;font-size:9px">
       <tr>
         <td style="border:none;width:50%;vertical-align:top">
           <div><b>Destinatario</b> ${esc(guia.destinatario_nombre)}</div>
@@ -110,25 +110,25 @@ export function construirGuiaHTML(guia, config) {
       </tr>
     </table>
 
-    <div style="font-size:11px;margin-top:4px"><b>Motivo de traslado</b></div>
-    <div style="border:1px solid #94a3b8;padding:6px 8px;display:flex;flex-wrap:wrap;margin-bottom:8px">${checkboxes}</div>
+    <div style="font-size:9px;margin-top:3px"><b>Motivo de traslado</b></div>
+    <div style="border:1px solid #94a3b8;padding:4px 6px;display:flex;flex-wrap:wrap;margin-bottom:5px">${checkboxes}</div>
 
-    <div style="font-size:11px"><b>Datos del bien transportado</b></div>
+    <div style="font-size:9px"><b>Datos del bien transportado</b></div>
     <table style="width:100%">
       <thead>
         <tr>
-          <th style="width:36px;text-align:center">Nº</th>
-          <th style="width:110px">Código</th>
+          <th style="width:28px;text-align:center">Nº</th>
+          <th style="width:90px">Código</th>
           <th>Descripción</th>
-          <th style="width:70px;text-align:center">Cantidad</th>
-          <th style="width:90px;text-align:center">Unidad de despacho</th>
+          <th style="width:52px;text-align:center">Cantidad</th>
+          <th style="width:62px;text-align:center">Unidad de despacho</th>
         </tr>
       </thead>
       <tbody>${filas}</tbody>
     </table>
 
-    <div style="font-size:11px;margin-top:8px"><b>Empresa de transporte</b></div>
-    <table style="width:100%;font-size:11px">
+    <div style="font-size:9px;margin-top:5px"><b>Empresa de transporte</b></div>
+    <table style="width:100%;font-size:9px">
       <tr>
         <td style="width:55%;vertical-align:top">
           <div><b>RUC / Razón social:</b></div>
@@ -145,25 +145,30 @@ export function construirGuiaHTML(guia, config) {
 
     ${
       guia.observaciones
-        ? `<div style="border:1px solid #94a3b8;padding:5px 8px;margin-top:6px;font-size:11px"><b>Observaciones</b><br/>${esc(guia.observaciones)}</div>`
+        ? `<div style="border:1px solid #94a3b8;padding:4px 6px;margin-top:4px;font-size:9px"><b>Observaciones</b><br/>${esc(guia.observaciones)}</div>`
         : ""
     }
 
-    <div style="display:flex;justify-content:flex-end;margin-top:40px;font-size:11px">
+    <div style="display:flex;justify-content:flex-end;margin-top:22px;font-size:9px">
       <div style="text-align:center">
-        <div style="border-top:1px solid #334155;width:230px;padding-top:4px">Conformidad del cliente</div>
-        <div style="text-align:left;margin-top:6px">Nombre:</div>
+        <div style="border-top:1px solid #334155;width:180px;padding-top:3px">Conformidad del cliente</div>
+        <div style="text-align:left;margin-top:4px">Nombre:</div>
         <div style="text-align:left">DNI:</div>
       </div>
     </div>
 
-    <div style="margin-top:18px;border-top:1px dashed #cbd5e1;padding-top:6px;font-size:9px;color:#64748b">
+    <div style="margin-top:10px;border-top:1px dashed #cbd5e1;padding-top:5px;font-size:7px;color:#64748b">
       <div style="font-weight:700;color:#334155">LA MERCADERÍA VIAJA POR CUENTA Y RIESGO DEL COMPRADOR. NO ADMITIMOS RECLAMO POR ROBO O AVERÍA.</div>
-      <div style="margin-top:4px">Documento de traslado — representación interna. La emisión electrónica ante SUNAT (con QR y número de autorización) se realiza desde el módulo de facturación electrónica.</div>
+      <div style="margin-top:3px">Documento de traslado — representación interna. La emisión electrónica ante SUNAT (con QR y número de autorización) se realiza desde el módulo de facturación electrónica.</div>
     </div>`;
 }
 
-// Arma e imprime la guía de remisión con la marca de la empresa (config).
+// Arma e imprime la guía de remisión con la marca de la empresa (config). Se
+// imprime en A5 (media hoja) con densidad compacta, al estilo de la guía
+// electrónica de referencia.
 export function imprimirGuia(guia, config) {
-  imprimirDocumento(`Guía ${numeroGuia(guia)}`, construirGuiaHTML(guia, config));
+  imprimirDocumento(`Guía ${numeroGuia(guia)}`, construirGuiaHTML(guia, config), {
+    pageSize: "A5 portrait",
+    compacto: true,
+  });
 }

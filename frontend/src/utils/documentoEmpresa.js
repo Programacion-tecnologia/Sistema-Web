@@ -41,14 +41,30 @@ export function encabezadoEmpresaHTML(config, doc) {
 
 // Abre una ventana nueva con el documento y lo manda a imprimir. Recibe el
 // cuerpo (sin <html>) ya armado; agrega el reset y dispara window.print().
-export function imprimirDocumento(titulo, cuerpoHTML) {
+//
+// opciones.pageSize: fija el tamaño de hoja (ej. "A5 portrait"); vacío = default
+//   del navegador (A4/Letter). opciones.compacto: escala fuentes/celdas/márgenes
+//   para documentos densos (guía en A5). Por defecto todo queda como estaba, así
+//   la nota de venta no cambia.
+export function imprimirDocumento(titulo, cuerpoHTML, opciones = {}) {
+  const { pageSize = "", compacto = false } = opciones;
+
+  const bodyFont = compacto ? 9 : 12;
+  const bodyPad = compacto ? 0 : 24;
+  const maxW = compacto ? "none" : "800px";
+  const cellPad = compacto ? "2px 5px" : "5px 8px";
+  const thFont = compacto ? 8 : 11;
+  const tableMargin = compacto ? 5 : 12;
+  const pageCss = pageSize ? `@page{size:${pageSize};margin:7mm}` : "";
+
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(titulo)}</title>
     <style>
       *{box-sizing:border-box}
-      body{font-family:system-ui,Arial,sans-serif;color:#0f172a;padding:24px;max-width:800px;margin:0 auto;font-size:12px}
-      table{width:100%;border-collapse:collapse;margin:12px 0}
-      th,td{padding:5px 8px;border:1px solid #cbd5e1;text-align:left}
-      th{background:#f1f5f9;font-size:11px}
+      ${pageCss}
+      body{font-family:system-ui,Arial,sans-serif;color:#0f172a;padding:${bodyPad}px;max-width:${maxW};margin:0 auto;font-size:${bodyFont}px}
+      table{width:100%;border-collapse:collapse;margin:${tableMargin}px 0}
+      th,td{padding:${cellPad};border:1px solid #cbd5e1;text-align:left}
+      th{background:#f1f5f9;font-size:${thFont}px}
       .muted{color:#64748b}
     </style></head><body>${cuerpoHTML}
     <script>window.onload=function(){window.print()}</script></body></html>`;
