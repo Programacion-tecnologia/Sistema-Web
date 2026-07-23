@@ -8,6 +8,7 @@ import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
 import { imprimirGuia, numeroGuia } from "../../utils/guiaImprimible";
 import { compartirPorWhatsApp } from "../../utils/whatsapp";
+import RotuloEnvioModal from "../../components/Guias/RotuloEnvioModal";
 
 const PUEDE_ANULAR = [ROLES.ADMIN, ROLES.GERENCIA];
 
@@ -50,6 +51,7 @@ export default function GuiaDetalle() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [anulando, setAnulando] = useState(false);
+  const [mostrarRotulo, setMostrarRotulo] = useState(false);
 
   const cargar = () => {
     setLoading(true);
@@ -163,6 +165,9 @@ export default function GuiaDetalle() {
           <Button variant="secondary" onClick={() => imprimirGuia(guia, config)}>
             Imprimir
           </Button>
+          <Button variant="secondary" onClick={() => setMostrarRotulo(true)}>
+            Rótulo de envío
+          </Button>
           <Button
             variant="success"
             onClick={() => compartirPorWhatsApp(guia.cliente?.telefono, textoGuiaWhatsApp(guia, config))}
@@ -179,6 +184,10 @@ export default function GuiaDetalle() {
           </Button>
         </div>
       </Card>
+
+      {mostrarRotulo && (
+        <RotuloEnvioModal guia={guia} config={config} onCerrar={() => setMostrarRotulo(false)} />
+      )}
     </>
   );
 }
