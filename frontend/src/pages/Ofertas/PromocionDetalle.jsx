@@ -53,10 +53,11 @@ function FilaProductoPromo({ fila, onGuardarPrecio, onQuitar, procesando }) {
     if (valor !== Number(fila.precio_oferta)) onGuardarPrecio(fila, valor);
   };
 
+  // Escribir el % solo recalcula el precio en local; se persiste al salir del
+  // campo (onBlur -> persistir), no en cada tecla, para no deshabilitar el
+  // input a mitad de tipeo (se comia digitos).
   const aplicarDescuento = (pctStr) => {
-    const nuevo = precioDesdeDescuento(p.precio_venta, pctStr);
-    setPrecio(String(nuevo));
-    if (nuevo !== Number(fila.precio_oferta)) onGuardarPrecio(fila, nuevo);
+    setPrecio(String(precioDesdeDescuento(p.precio_venta, pctStr)));
   };
 
   return (
@@ -93,6 +94,7 @@ function FilaProductoPromo({ fila, onGuardarPrecio, onQuitar, procesando }) {
           value={pct}
           disabled={procesando}
           onChange={(e) => aplicarDescuento(e.target.value)}
+          onBlur={persistir}
           className="w-16 rounded border border-slate-300 px-2 py-1 text-right text-sm"
         />
       </div>
