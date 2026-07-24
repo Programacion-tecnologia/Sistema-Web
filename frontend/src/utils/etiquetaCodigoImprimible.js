@@ -1,20 +1,22 @@
 import JsBarcode from "jsbarcode";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 import { formatearPrecio } from "./currency";
 
-// Etiqueta de código de barras para pegar en el producto. Formato 50 x 30 mm
-// (una por página, para impresora térmica de etiquetas). Renderiza el código
-// con jsbarcode a una imagen PNG y la embebe, así el HTML de impresión es
-// autocontenido (no depende de la librería en la ventana nueva).
+// Etiqueta de código de barras para pegar en el producto. El tamaño (ancho x
+// alto en mm) es configurable para que calce con el rollo de la impresora
+// térmica y no se corte. Renderiza el código con jsbarcode a una imagen PNG y
+// la embebe (HTML de impresión autocontenido). Ofrece imprimir (ventana) o
+// descargar PDF al tamaño exacto (más fiable para la etiquetadora).
 
 function esc(v) {
   return String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 }
 
-// EAN-13 si son 13 dígitos; si no (o si el EAN no valida), cae a CODE128, que
-// codifica cualquier texto.
+// EAN-13 si son 13 dígitos; si no (o si el EAN no valida), cae a CODE128.
 function barcodeDataUrl(codigo) {
   const canvas = document.createElement("canvas");
-  const opts = { width: 2, height: 45, fontSize: 13, margin: 4, displayValue: true };
+  const opts = { width: 2, height: 60, fontSize: 16, margin: 4, displayValue: true };
   try {
     JsBarcode(canvas, codigo, { ...opts, format: /^\d{13}$/.test(codigo) ? "EAN13" : "CODE128" });
   } catch {
@@ -23,7 +25,10 @@ function barcodeDataUrl(codigo) {
   return canvas.toDataURL("image/png");
 }
 
-export function construirEtiquetaHTML(producto) {
+// HTML de UNA etiqueta, con estilos inline y tamaño dado (mm), así se ve igual
+// tanto en la ventana de impresión como capturada para el PDF. El código se
+// escala con max-width:100% para nunca pasarse del ancho (no se corta).
+export function construirEtiquetaHTML(producto, { anchoMm = 50, altoMm = 30 } = {}) {
   const codigo = producto.codigo_barras;
   if (!codigo) return "";
 
@@ -39,34 +44,80 @@ export function construirEtiquetaHTML(producto) {
       ? formatearPrecio(producto.precio_venta, producto.moneda)
       : "";
 
-  return `<div class="etq">
-    <div class="nom">${esc(producto.nombre)}</div>
-    ${img ? `<img class="bc" src="${img}" alt="${esc(codigo)}" />` : `<div class="cod">${esc(codigo)}</div>`}
-    ${precio ? `<div class="pr">${esc(precio)}</div>` : ""}
+  return `<div class="etq" style="width:${anchoMm}mm;height:${altoMm}mm;padding:1.5mm;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden;font-family:system-ui,Arial,sans-serif;color:#0f172a">
+    <div style="font-size:8px;font-weight:700;line-height:1.1;width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(producto.nombre)}</div>
+    ${
+      img
+        ? `<img src="${img}" alt="${esc(codigo)}" style="max-width:100%;max-height:60%;height:auto;object-fit:contain" />`
+        : `<div style="font-size:12px;font-weight:700;letter-spacing:1px">${esc(codigo)}</div>`
+    }
+    ${precio ? `<div style="font-size:11px;font-weight:800;margin-top:1px">${esc(precio)}</div>` : ""}
   </div>`;
 }
 
-export function imprimirEtiquetas(productos) {
-  const cuerpos = productos.map(construirEtiquetaHTML).filter(Boolean).join("");
+// Expande la lista repitiendo cada producto `copias` veces.
+function expandir(productos, copias) {
+  const n = Math.max(1, Math.trunc(Number(copias)) || 1);
+  return productos.flatMap((p) => Array.from({ length: n }, () => p));
+}
+
+export function imprimirEtiquetas(productos, { anchoMm = 50, altoMm = 30, copias = 1 } = {}) {
+  const items = expandir(productos, copias);
+  const cuerpos = items.map((p) => construirEtiquetaHTML(p, { anchoMm, altoMm })).filter(Boolean).join("");
   if (!cuerpos) return;
 
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Etiquetas</title>
     <style>
       *{box-sizing:border-box}
-      @page{size:50mm 30mm;margin:0}
-      body{margin:0;font-family:system-ui,Arial,sans-serif;color:#0f172a}
-      .etq{width:50mm;height:30mm;padding:1.5mm;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden;page-break-after:always}
+      @page{size:${anchoMm}mm ${altoMm}mm;margin:0}
+      body{margin:0}
+      .etq{page-break-after:always}
       .etq:last-child{page-break-after:auto}
-      .nom{font-size:8px;font-weight:700;line-height:1.05;max-height:20px;overflow:hidden}
-      .bc{max-width:100%;height:auto}
-      .cod{font-size:11px;font-weight:700;letter-spacing:1px}
-      .pr{font-size:11px;font-weight:800;margin-top:1px}
     </style></head><body>${cuerpos}
     <script>window.onload=function(){window.print()}</script></body></html>`;
 
-  const win = window.open("", "_blank", "width=420,height=320");
+  const win = window.open("", "_blank", "width=480,height=360");
   if (win) {
     win.document.write(html);
     win.document.close();
   }
+}
+
+// Renderiza una etiqueta fuera de pantalla y la captura a canvas para el PDF.
+async function etiquetaACanvas(producto, anchoMm, altoMm) {
+  const cont = document.createElement("div");
+  cont.style.cssText = "position:fixed;left:-10000px;top:0;background:#fff";
+  cont.innerHTML = construirEtiquetaHTML(producto, { anchoMm, altoMm });
+  const el = cont.firstElementChild;
+  document.body.appendChild(cont);
+  try {
+    return await html2canvas(el, { scale: 4, backgroundColor: "#ffffff" });
+  } finally {
+    document.body.removeChild(cont);
+  }
+}
+
+// Descarga las etiquetas como PDF, una por página al tamaño exacto (mm). Es la
+// opción más fiable para imprimir en la etiquetadora sin que se corte.
+export async function descargarEtiquetasPDF(
+  productos,
+  { anchoMm = 50, altoMm = 30, copias = 1, nombreArchivo = "etiquetas" } = {}
+) {
+  const items = expandir(
+    productos.filter((p) => p.codigo_barras),
+    copias
+  );
+  if (items.length === 0) return;
+
+  const orientacion = anchoMm >= altoMm ? "landscape" : "portrait";
+  const pdf = new jsPDF({ orientation: orientacion, unit: "mm", format: [anchoMm, altoMm] });
+
+  for (let i = 0; i < items.length; i++) {
+    const canvas = await etiquetaACanvas(items[i], anchoMm, altoMm);
+    const img = canvas.toDataURL("image/png");
+    if (i > 0) pdf.addPage([anchoMm, altoMm], orientacion);
+    pdf.addImage(img, "PNG", 0, 0, anchoMm, altoMm);
+  }
+
+  pdf.save(`${nombreArchivo}.pdf`);
 }

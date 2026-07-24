@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { buscarProductosPaginado, PRODUCTOS_PAGE_SIZE } from "../../services/productosService";
 import { generarCodigoBarras, generarCodigosFaltantes } from "../../services/codigosBarrasService";
-import { imprimirEtiquetas } from "../../utils/etiquetaCodigoImprimible";
+import { imprimirEtiquetas, descargarEtiquetasPDF } from "../../utils/etiquetaCodigoImprimible";
 import { useAuth } from "../../hooks/useAuth";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
@@ -25,6 +25,24 @@ export default function CodigosBarras() {
   const [procesandoId, setProcesandoId] = useState(null);
   const [generandoTodos, setGenerandoTodos] = useState(false);
   const [mensaje, setMensaje] = useState(null);
+
+  // Opciones de etiqueta: tamaño (mm) para que calce con el rollo y no se corte,
+  // y cuántas copias por producto.
+  const [anchoMm, setAnchoMm] = useState(50);
+  const [altoMm, setAltoMm] = useState(30);
+  const [copias, setCopias] = useState(1);
+  const [generandoPdf, setGenerandoPdf] = useState(false);
+
+  const opcionesEtiqueta = { anchoMm: Number(anchoMm) || 50, altoMm: Number(altoMm) || 30, copias };
+
+  const descargarPdf = async (lista) => {
+    setGenerandoPdf(true);
+    try {
+      await descargarEtiquetasPDF(lista, opcionesEtiqueta);
+    } finally {
+      setGenerandoPdf(false);
+    }
+  };
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -131,14 +149,70 @@ export default function CodigosBarras() {
             />
             Solo sin código
           </label>
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={seleccionados.length === 0}
-            onClick={() => imprimirEtiquetas(seleccionados)}
-          >
-            Imprimir etiquetas ({seleccionados.length})
-          </Button>
+        </div>
+
+        {/* Opciones de etiqueta: tamaño para que calce con el rollo + copias. */}
+        <div className="mt-3 flex flex-wrap items-end gap-3 rounded-lg bg-slate-50 p-3">
+          <div>
+            <label className="block text-xs text-slate-500 mb-0.5">Ancho (mm)</label>
+            <input
+              type="number"
+              min="10"
+              value={anchoMm}
+              onChange={(e) => setAnchoMm(e.target.value)}
+              className="w-20 rounded border border-slate-300 px-2 py-1 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-0.5">Alto (mm)</label>
+            <input
+              type="number"
+              min="10"
+              value={altoMm}
+              onChange={(e) => setAltoMm(e.target.value)}
+              className="w-20 rounded border border-slate-300 px-2 py-1 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-500 mb-0.5">Copias c/u</label>
+            <input
+              type="number"
+              min="1"
+              value={copias}
+              onChange={(e) => setCopias(Math.max(1, Math.trunc(Number(e.target.value)) || 1))}
+              className="w-20 rounded border border-slate-300 px-2 py-1 text-sm"
+            />
+          </div>
+          <div className="flex gap-1">
+            {[5, 10, 20].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setCopias(n)}
+                className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600 hover:bg-slate-100"
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          <div className="ml-auto flex gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={seleccionados.length === 0}
+              onClick={() => imprimirEtiquetas(seleccionados, opcionesEtiqueta)}
+            >
+              Imprimir ({seleccionados.length})
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={seleccionados.length === 0 || generandoPdf}
+              onClick={() => descargarPdf(seleccionados)}
+            >
+              {generandoPdf ? "Generando..." : `Descargar PDF (${seleccionados.length})`}
+            </Button>
+          </div>
         </div>
 
         {mensaje && <p className="mt-3 text-sm text-success-700">{mensaje}</p>}
@@ -192,10 +266,18 @@ export default function CodigosBarras() {
                   <button
                     type="button"
                     disabled={!p.codigo_barras}
-                    onClick={() => imprimirEtiquetas([p])}
+                    onClick={() => imprimirEtiquetas([p], opcionesEtiqueta)}
                     className="text-sm text-slate-600 hover:underline disabled:opacity-40"
                   >
                     Imprimir
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!p.codigo_barras || generandoPdf}
+                    onClick={() => descargarPdf([p])}
+                    className="text-sm text-slate-600 hover:underline disabled:opacity-40"
+                  >
+                    PDF
                   </button>
                 </div>
               </div>
