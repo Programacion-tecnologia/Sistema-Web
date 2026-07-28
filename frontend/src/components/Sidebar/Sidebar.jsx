@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { ROLES } from "../../utils/roles";
 import { getConfiguracionEmpresa } from "../../services/configuracionService";
@@ -50,24 +50,29 @@ export default function Sidebar({ abierto, onCerrar }) {
           abierto ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Marca: logo de la empresa en una caja blanca (se ve sobre el sidebar
-            oscuro sin importar los colores del PNG). */}
-        <div className="flex items-center gap-2 border-b border-slate-800 p-3">
-          <div className="flex min-h-[46px] flex-1 items-center justify-center rounded-lg bg-white px-3 py-2">
+        {/* Marca: franja blanca a todo el ancho con el logo (el PNG es oscuro
+            sobre claro, así que necesita fondo claro). Clickeable → inicio. */}
+        <div className="relative bg-white">
+          <Link
+            to="/"
+            onClick={onCerrar}
+            aria-label="Ir al inicio"
+            className="flex items-center justify-center px-4 py-3 transition hover:bg-slate-50"
+          >
             {logoUrl ? (
-              <img src={logoUrl} alt="Rios Performance" className="h-9 max-w-full object-contain" />
+              <img src={logoUrl} alt="Rios Performance" className="h-16 w-auto max-w-full object-contain" />
             ) : (
-              <span className="text-base font-extrabold tracking-tight text-slate-900">
+              <span className="text-lg font-extrabold tracking-tight text-slate-900">
                 Rios <span className="text-primary-600">Performance</span>
               </span>
             )}
-          </div>
+          </Link>
           {/* Cerrar: solo en móvil. */}
           <button
             type="button"
             onClick={onCerrar}
             aria-label="Cerrar menú"
-            className="lg:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-300 hover:bg-slate-800"
+            className="absolute right-2 top-2 lg:hidden flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <line x1="6" y1="6" x2="18" y2="18" />

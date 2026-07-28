@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import Button from "../Button/Button";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -22,9 +23,9 @@ export default function Navbar({ onToggleSidebar }) {
           </svg>
         </button>
 
-        <h1 className="text-lg sm:text-xl font-bold tracking-tight">
+        <Link to="/" className="text-lg sm:text-xl font-bold tracking-tight rounded hover:text-primary-100 transition">
           Rios <span className="text-primary-200 font-semibold">Performance</span>
-        </h1>
+        </Link>
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
