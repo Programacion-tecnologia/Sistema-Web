@@ -1,8 +1,6 @@
-import { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { ROLES } from "../../utils/roles";
-import { getConfiguracionEmpresa } from "../../services/configuracionService";
 import { MENU_ICONS } from "./menuIcons";
 
 // "roles" ausente = visible para cualquier rol logueado. Solo se restringen
@@ -30,14 +28,6 @@ export default function Sidebar({ abierto, onCerrar }) {
   const { rol } = useAuth();
   const menuVisible = MENU.filter((item) => !item.roles || item.roles.includes(rol));
 
-  // Logo real de la empresa (Configuración). Se pide una vez por sesión.
-  const [logoUrl, setLogoUrl] = useState(null);
-  useEffect(() => {
-    getConfiguracionEmpresa()
-      .then((cfg) => setLogoUrl(cfg?.logo_url ?? null))
-      .catch(() => {});
-  }, []);
-
   return (
     <>
       {/* Fondo oscuro: solo en móvil, cuando el cajón está abierto. */}
@@ -50,29 +40,23 @@ export default function Sidebar({ abierto, onCerrar }) {
           abierto ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Marca: franja blanca a todo el ancho con el logo (el PNG es oscuro
-            sobre claro, así que necesita fondo claro). Clickeable → inicio. */}
-        <div className="relative bg-white">
+        {/* Marca: logo transparente directo sobre el fondo del sidebar (sin
+            caja blanca). Clickeable → inicio. */}
+        <div className="relative border-b border-slate-800">
           <Link
             to="/"
             onClick={onCerrar}
             aria-label="Ir al inicio"
-            className="flex items-center justify-center px-4 py-3 transition hover:bg-slate-50"
+            className="flex items-center justify-center px-4 py-4 transition hover:bg-white/5"
           >
-            {logoUrl ? (
-              <img src={logoUrl} alt="Rios Performance" className="h-16 w-auto max-w-full object-contain" />
-            ) : (
-              <span className="text-lg font-extrabold tracking-tight text-slate-900">
-                Rios <span className="text-primary-600">Performance</span>
-              </span>
-            )}
+            <img src="/logo-rios.png" alt="Rios Performance" className="h-16 w-auto max-w-full object-contain" />
           </Link>
           {/* Cerrar: solo en móvil. */}
           <button
             type="button"
             onClick={onCerrar}
             aria-label="Cerrar menú"
-            className="absolute right-2 top-2 lg:hidden flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
+            className="absolute right-2 top-2 lg:hidden flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 hover:bg-slate-800"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <line x1="6" y1="6" x2="18" y2="18" />
