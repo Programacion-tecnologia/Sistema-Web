@@ -14,8 +14,26 @@ import { useAuth } from "../../hooks/useAuth";
 import Card from "../../components/Card/Card";
 import StatTile from "../../components/Dashboard/StatTile";
 import VentasPorMesChart from "../../components/Dashboard/VentasPorMesChart";
+import Skeleton from "../../components/ui/Skeleton";
 import { ESTADO_LABEL, ESTADO_BARRA_CLASS } from "../../utils/cotizacionEstado";
 import { formatearPrecio } from "../../utils/currency";
+
+// Íconos de los stat tiles (SVG de línea, heredan el color del chip).
+const di = (children) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
+    {children}
+  </svg>
+);
+const ICONS = {
+  doc: di(<><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4M9 12h6M9 16h4" /></>),
+  reloj: di(<><circle cx="12" cy="12" r="8.5" /><path d="M12 8v4l2.5 2" /></>),
+  alerta: di(<><path d="M12 4l9 16H3l9-16z" /><path d="M12 10v4M12 17h.01" /></>),
+  caja: di(<><path d="M3 7l9-4 9 4v10l-9 4-9-4V7z" /><path d="M3 7l9 4 9-4M12 21V11" /></>),
+  dinero: di(<><path d="M12 3v18M8 7h6a2.5 2.5 0 0 1 0 5H9a2.5 2.5 0 0 0 0 5h7" /></>),
+  camion: di(<><path d="M3 6h11v9H3z" /><path d="M14 9h3.5L21 12v3h-7" /><circle cx="7" cy="18" r="1.5" /><circle cx="17.5" cy="18" r="1.5" /></>),
+  porcentaje: di(<><path d="M19 5 5 19" /><circle cx="7.5" cy="7.5" r="2.5" /><circle cx="16.5" cy="16.5" r="2.5" /></>),
+  ticket: di(<><path d="M4 5h16v5a2 2 0 0 0 0 4v5H4v-5a2 2 0 0 0 0-4V5z" /><path d="M9 9h6M9 13h4" /></>),
+};
 
 // Solo estados que alguna funcion del sistema realmente asigna hoy (no
 // incluye "aprobada": aprobar_cotizacion pasa directo a "reservada").
@@ -92,7 +110,23 @@ export default function Dashboard() {
   }, [rol]);
 
   if (loading) {
-    return <p className="text-sm text-slate-500">Cargando dashboard...</p>;
+    return (
+      <>
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="mt-2 h-4 w-64" />
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-24" />
+          ))}
+        </div>
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-24" />
+          ))}
+        </div>
+        <Skeleton className="mt-8 h-72" />
+      </>
+    );
   }
 
   if (error) {
@@ -124,24 +158,28 @@ export default function Dashboard() {
           value={pendientes}
           variant={pendientes > 0 ? "warning" : "neutral"}
           to="/cotizaciones"
+          icon={ICONS.doc}
         />
         <StatTile
           label="Por vencer (próximas 24h)"
           value={porVencer}
           variant={porVencer > 0 ? "warning" : "neutral"}
           to="/cotizaciones"
+          icon={ICONS.reloj}
         />
         <StatTile
           label="Productos agotados"
           value={alertasStock.agotados.length}
           variant={alertasStock.agotados.length > 0 ? "danger" : "neutral"}
           to="/productos"
+          icon={ICONS.alerta}
         />
         <StatTile
           label="Productos con stock bajo"
           value={alertasStock.bajos.length}
           variant={alertasStock.bajos.length > 0 ? "warning" : "neutral"}
           to="/productos"
+          icon={ICONS.caja}
         />
       </div>
 
@@ -150,11 +188,15 @@ export default function Dashboard() {
         <StatTile
           label="Cotizado este mes"
           value={formatearPrecio(resumenComercial.montoCotizado.PEN, "PEN")}
+          variant="primary"
+          icon={ICONS.dinero}
           sublabel={resumenComercial.montoCotizado.USD > 0 ? formatearPrecio(resumenComercial.montoCotizado.USD, "USD") : null}
         />
         <StatTile
           label="Despachado este mes"
           value={formatearPrecio(resumenComercial.montoDespachado.PEN, "PEN")}
+          variant="success"
+          icon={ICONS.camion}
           sublabel={
             resumenComercial.montoDespachado.USD > 0 ? formatearPrecio(resumenComercial.montoDespachado.USD, "USD") : null
           }
@@ -162,6 +204,7 @@ export default function Dashboard() {
         <StatTile
           label="Tasa de conversión"
           value={resumenComercial.tasaConversion !== null ? `${resumenComercial.tasaConversion.toFixed(0)}%` : "—"}
+          icon={ICONS.porcentaje}
           sublabel={
             resumenComercial.tasaConversion === null
               ? "Sin cotizaciones resueltas este mes"
@@ -171,6 +214,7 @@ export default function Dashboard() {
         <StatTile
           label="Ticket promedio"
           value={resumenComercial.ticketPromedio.PEN !== null ? formatearPrecio(resumenComercial.ticketPromedio.PEN, "PEN") : "—"}
+          icon={ICONS.ticket}
           sublabel={
             resumenComercial.ticketPromedio.USD !== null ? formatearPrecio(resumenComercial.ticketPromedio.USD, "USD") : null
           }

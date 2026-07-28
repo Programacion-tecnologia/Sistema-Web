@@ -1,6 +1,9 @@
+import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { ROLES } from "../../utils/roles";
+import { getConfiguracionEmpresa } from "../../services/configuracionService";
+import { MENU_ICONS } from "./menuIcons";
 
 // "roles" ausente = visible para cualquier rol logueado. Solo se restringen
 // los modulos donde eso realmente importa hoy (Scanner, Usuarios, Reportes).
@@ -27,6 +30,14 @@ export default function Sidebar({ abierto, onCerrar }) {
   const { rol } = useAuth();
   const menuVisible = MENU.filter((item) => !item.roles || item.roles.includes(rol));
 
+  // Logo real de la empresa (Configuración). Se pide una vez por sesión.
+  const [logoUrl, setLogoUrl] = useState(null);
+  useEffect(() => {
+    getConfiguracionEmpresa()
+      .then((cfg) => setLogoUrl(cfg?.logo_url ?? null))
+      .catch(() => {});
+  }, []);
+
   return (
     <>
       {/* Fondo oscuro: solo en móvil, cuando el cajón está abierto. */}
@@ -35,18 +46,28 @@ export default function Sidebar({ abierto, onCerrar }) {
       )}
 
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-40 w-64 shrink-0 h-full overflow-y-auto bg-slate-900 text-white transition-transform duration-200 ease-out lg:translate-x-0 ${
+        className={`fixed lg:static inset-y-0 left-0 z-40 flex w-64 shrink-0 h-full flex-col bg-slate-900 text-white transition-transform duration-200 ease-out lg:translate-x-0 ${
           abierto ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Menú</h2>
+        {/* Marca: logo de la empresa en una caja blanca (se ve sobre el sidebar
+            oscuro sin importar los colores del PNG). */}
+        <div className="flex items-center gap-2 border-b border-slate-800 p-3">
+          <div className="flex min-h-[46px] flex-1 items-center justify-center rounded-lg bg-white px-3 py-2">
+            {logoUrl ? (
+              <img src={logoUrl} alt="Rios Performance" className="h-9 max-w-full object-contain" />
+            ) : (
+              <span className="text-base font-extrabold tracking-tight text-slate-900">
+                Rios <span className="text-primary-600">Performance</span>
+              </span>
+            )}
+          </div>
           {/* Cerrar: solo en móvil. */}
           <button
             type="button"
             onClick={onCerrar}
             aria-label="Cerrar menú"
-            className="lg:hidden -mr-1 flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 hover:bg-slate-800"
+            className="lg:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-300 hover:bg-slate-800"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <line x1="6" y1="6" x2="18" y2="18" />
@@ -55,7 +76,7 @@ export default function Sidebar({ abierto, onCerrar }) {
           </button>
         </div>
 
-        <nav className="p-3">
+        <nav className="flex-1 overflow-y-auto p-3">
           {menuVisible.map((item) => (
             <NavLink
               key={item.path}
@@ -63,14 +84,15 @@ export default function Sidebar({ abierto, onCerrar }) {
               end={item.end}
               onClick={onCerrar}
               className={({ isActive }) =>
-                `block w-full text-left px-4 py-3 rounded-lg transition mb-1 text-sm font-medium ${
+                `flex items-center gap-3 w-full text-left px-3 py-2.5 rounded-lg transition mb-0.5 text-sm font-medium ${
                   isActive
-                    ? "bg-primary-600 text-white"
+                    ? "bg-primary-600 text-white shadow-sm"
                     : "text-slate-300 hover:bg-slate-800 hover:text-white"
                 }`
               }
             >
-              {item.label}
+              {MENU_ICONS[item.path]}
+              <span className="truncate">{item.label}</span>
             </NavLink>
           ))}
         </nav>

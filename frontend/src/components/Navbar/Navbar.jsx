@@ -22,7 +22,9 @@ export default function Navbar({ onToggleSidebar }) {
           </svg>
         </button>
 
-        <h1 className="text-lg sm:text-xl font-bold tracking-tight">System Web</h1>
+        <h1 className="text-lg sm:text-xl font-bold tracking-tight">
+          Rios <span className="text-primary-200 font-semibold">Performance</span>
+        </h1>
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4">
