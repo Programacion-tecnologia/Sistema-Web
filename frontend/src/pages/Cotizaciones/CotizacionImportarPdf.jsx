@@ -335,6 +335,7 @@ export default function CotizacionImportarPdf() {
                               <option value="">No encontrado — asignar producto...</option>
                               {productosDisponibles.map((producto) => (
                                 <option key={producto.id} value={producto.id}>
+                                  {producto.codigo_referencia ? `[${producto.codigo_referencia}] ` : ""}
                                   {producto.nombre}
                                 </option>
                               ))}
@@ -424,6 +425,7 @@ export default function CotizacionImportarPdf() {
                                 <option value="">No encontrado — asignar producto...</option>
                                 {productosDisponibles.map((producto) => (
                                   <option key={producto.id} value={producto.id}>
+                                    {producto.codigo_referencia ? `[${producto.codigo_referencia}] ` : ""}
                                     {producto.nombre}
                                   </option>
                                 ))}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { buscarProductosPaginado, PRODUCTOS_PAGE_SIZE } from "../../services/productosService";
 import { generarCodigoBarras, generarCodigosFaltantes } from "../../services/codigosBarrasService";
 import { imprimirEtiquetas, descargarEtiquetasPDF } from "../../utils/etiquetaCodigoImprimible";
@@ -10,6 +11,7 @@ const DEBOUNCE_MS = 300;
 
 export default function CodigosBarras() {
   const { rol } = useAuth();
+  const navigate = useNavigate();
 
   const [busqueda, setBusqueda] = useState("");
   const [terminoDebounced, setTerminoDebounced] = useState("");
@@ -122,11 +124,18 @@ export default function CodigosBarras() {
             Generá y asigná códigos EAN-13 a productos que no los tienen, e imprimí sus etiquetas.
           </p>
         </div>
-        {puedeGenerarLote && (
-          <Button variant="secondary" disabled={generandoTodos} onClick={handleGenerarTodos}>
-            {generandoTodos ? "Generando..." : "Generar todos los faltantes"}
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {puedeGenerarLote && (
+            <Button variant="secondary" onClick={() => navigate("/codigos-barras/importar")}>
+              Importar desde respaldo
+            </Button>
+          )}
+          {puedeGenerarLote && (
+            <Button variant="secondary" disabled={generandoTodos} onClick={handleGenerarTodos}>
+              {generandoTodos ? "Generando..." : "Generar todos los faltantes"}
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card className="mt-6">

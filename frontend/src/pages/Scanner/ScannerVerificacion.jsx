@@ -248,6 +248,7 @@ export default function ScannerVerificacion() {
                   >
                     {lineas.map((l) => (
                       <option key={l.producto_id} value={l.producto_id}>
+                        {l.codigo_referencia ? `[${l.codigo_referencia}] ` : ""}
                         {l.nombre}
                         {l.codigo_barras ? " (ya tiene código)" : ""}
                       </option>
