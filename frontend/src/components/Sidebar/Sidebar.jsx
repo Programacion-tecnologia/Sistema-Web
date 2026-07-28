@@ -47,9 +47,13 @@ export default function Sidebar({ abierto, onCerrar }) {
             to="/"
             onClick={onCerrar}
             aria-label="Ir al inicio"
-            className="flex items-center justify-center px-4 py-4 transition hover:bg-white/5"
+            className="flex items-center justify-center px-3 py-5 transition hover:bg-white/5"
           >
-            <img src="/logo-rios.png" alt="Rios Performance" className="h-16 w-auto max-w-full object-contain" />
+            <img
+              src="/logo-rios.png"
+              alt="Rios Performance"
+              className="w-full max-w-[212px] h-auto object-contain"
+            />
           </Link>
           {/* Cerrar: solo en móvil. */}
           <button
