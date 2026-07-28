@@ -5,6 +5,8 @@ import { useAuth } from "../../hooks/useAuth";
 import { ROLES } from "../../utils/roles";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
+import EmptyState from "../../components/ui/EmptyState";
+import TableSkeleton from "../../components/ui/TableSkeleton";
 import { getNivelStock, STOCK_NIVEL_CLASS } from "../../utils/stock";
 
 const PUEDE_AJUSTAR = [ROLES.ADMIN, ROLES.GERENCIA];
@@ -127,15 +129,18 @@ export default function Inventario() {
       </div>
 
       <Card className="mt-4 p-0 overflow-hidden">
-        {loading && <p className="p-6 text-sm text-slate-500">Cargando inventario...</p>}
+        {loading && <TableSkeleton />}
         {error && <p className="p-6 text-sm text-danger-600">{error}</p>}
 
         {!loading && !error && productos.length === 0 && (
-          <p className="p-6 text-sm text-slate-500">
-            {hayFiltros
-              ? "Ningún producto coincide con los filtros."
-              : "Todavía no hay productos cargados."}
-          </p>
+          <EmptyState
+            title={hayFiltros ? "Sin resultados" : "Todavía no hay productos"}
+            description={
+              hayFiltros
+                ? "Ningún producto coincide con los filtros."
+                : "Cargá productos para ver su inventario."
+            }
+          />
         )}
 
         {/* Móvil: tarjetas apiladas con los stocks y las acciones. */}
@@ -504,14 +509,14 @@ function KardexModal({ producto, onClose }) {
 
   return (
     <ModalShell titulo={`Kardex: ${producto.nombre}`} onClose={onClose}>
-      {loading && <p className="text-sm text-slate-500">Cargando movimientos...</p>}
+      {loading && <TableSkeleton rows={4} />}
       {error && <p className="text-sm text-danger-600">{error}</p>}
 
       {!loading && !error && movimientos.length === 0 && (
-        <p className="text-sm text-slate-500">
-          Este producto todavía no tiene movimientos registrados. El kardex empieza a registrar desde
-          las compras, despachos y ajustes hechos de aquí en adelante.
-        </p>
+        <EmptyState
+          title="Sin movimientos todavía"
+          description="El kardex registra desde las compras, despachos y ajustes hechos de aquí en adelante."
+        />
       )}
 
       {!loading && !error && movimientos.length > 0 && (

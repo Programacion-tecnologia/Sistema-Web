@@ -6,6 +6,8 @@ import { imprimirEtiquetas, descargarEtiquetasPDF } from "../../utils/etiquetaCo
 import { useAuth } from "../../hooks/useAuth";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
+import EmptyState from "../../components/ui/EmptyState";
+import TableSkeleton from "../../components/ui/TableSkeleton";
 
 const DEBOUNCE_MS = 300;
 
@@ -226,12 +228,21 @@ export default function CodigosBarras() {
 
         {mensaje && <p className="mt-3 text-sm text-success-700">{mensaje}</p>}
         {error && <p className="mt-3 text-sm text-danger-600">{error}</p>}
-        {loading && <p className="mt-4 text-sm text-slate-500">Cargando productos...</p>}
+        {loading && (
+          <div className="mt-4">
+            <TableSkeleton rows={5} />
+          </div>
+        )}
 
         {!loading && productos.length === 0 && (
-          <p className="mt-4 text-sm text-slate-500">
-            {soloSinCodigo ? "No hay productos sin código de barras." : "Sin resultados."}
-          </p>
+          <EmptyState
+            title={soloSinCodigo ? "Todo tiene código de barras" : "Sin resultados"}
+            description={
+              soloSinCodigo
+                ? "No quedan productos sin código de barras."
+                : "Ningún producto coincide con la búsqueda."
+            }
+          />
         )}
 
         {!loading && productos.length > 0 && (

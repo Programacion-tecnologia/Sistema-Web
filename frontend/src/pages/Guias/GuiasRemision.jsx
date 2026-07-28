@@ -5,6 +5,8 @@ import { useAuth } from "../../hooks/useAuth";
 import { ROLES } from "../../utils/roles";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
+import EmptyState from "../../components/ui/EmptyState";
+import TableSkeleton from "../../components/ui/TableSkeleton";
 import { numeroGuia } from "../../utils/guiaImprimible";
 
 const PUEDE_EMITIR = [ROLES.ADMIN, ROLES.GERENCIA, ROLES.VENTAS, ROLES.ALMACEN];
@@ -37,11 +39,14 @@ export default function GuiasRemision() {
       </div>
 
       <Card className="mt-6 p-0 overflow-hidden">
-        {loading && <p className="p-6 text-sm text-slate-500">Cargando guías...</p>}
+        {loading && <TableSkeleton />}
         {error && <p className="p-6 text-sm text-danger-600">{error}</p>}
 
         {!loading && !error && guias.length === 0 && (
-          <p className="p-6 text-sm text-slate-500">Todavía no hay guías de remisión emitidas.</p>
+          <EmptyState
+            title="Todavía no hay guías de remisión"
+            description="Cuando emitas una guía, va a aparecer acá."
+          />
         )}
 
         {/* Móvil: tarjetas apiladas. */}

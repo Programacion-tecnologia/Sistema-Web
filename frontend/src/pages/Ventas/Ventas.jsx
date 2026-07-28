@@ -10,6 +10,7 @@ import { ROLES } from "../../utils/roles";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
 import ChipOferta from "../../components/Ofertas/ChipOferta";
+import EmptyState from "../../components/ui/EmptyState";
 import { formatearPrecio } from "../../utils/currency";
 import { METODOS_PAGO, METODO_PAGO_LABEL } from "../../utils/pagoMetodo";
 
@@ -537,7 +538,7 @@ export default function Ventas() {
           <h3 className="text-lg font-semibold text-slate-800">Ventas recientes</h3>
         </div>
         {ventasRecientes.length === 0 ? (
-          <p className="p-5 text-sm text-slate-500">Todavía no hay ventas.</p>
+          <EmptyState title="Todavía no hay ventas" description="Las ventas que registres aparecen acá." />
         ) : (
           <>
             {/* Móvil: tarjetas apiladas. */}

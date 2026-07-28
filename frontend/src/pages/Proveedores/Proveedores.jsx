@@ -5,6 +5,8 @@ import { useAuth } from "../../hooks/useAuth";
 import { ROLES } from "../../utils/roles";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
+import EmptyState from "../../components/ui/EmptyState";
+import TableSkeleton from "../../components/ui/TableSkeleton";
 
 const PUEDE_ESCRIBIR = [ROLES.ADMIN, ROLES.GERENCIA];
 
@@ -82,15 +84,18 @@ export default function Proveedores() {
       </div>
 
       <Card className="mt-4 p-0 overflow-hidden">
-        {loading && <p className="p-6 text-sm text-slate-500">Cargando proveedores...</p>}
+        {loading && <TableSkeleton />}
         {error && <p className="p-6 text-sm text-danger-600">{error}</p>}
 
         {!loading && !error && proveedoresFiltrados.length === 0 && (
-          <p className="p-6 text-sm text-slate-500">
-            {proveedores.length === 0
-              ? "Todavía no hay proveedores. Crea uno nuevo."
-              : "Ningún proveedor coincide con la búsqueda."}
-          </p>
+          <EmptyState
+            title={proveedores.length === 0 ? "Todavía no hay proveedores" : "Sin resultados"}
+            description={
+              proveedores.length === 0
+                ? "Creá un proveedor nuevo para empezar."
+                : "Ningún proveedor coincide con la búsqueda."
+            }
+          />
         )}
 
         {/* Móvil: tarjetas apiladas. */}

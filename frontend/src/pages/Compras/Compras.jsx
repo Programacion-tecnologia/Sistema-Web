@@ -5,6 +5,8 @@ import { useAuth } from "../../hooks/useAuth";
 import { ROLES } from "../../utils/roles";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
+import EmptyState from "../../components/ui/EmptyState";
+import TableSkeleton from "../../components/ui/TableSkeleton";
 import { ESTADO_LABEL, ESTADO_BADGE_CLASS } from "../../utils/compraEstado";
 import { formatearPrecio } from "../../utils/currency";
 
@@ -77,15 +79,18 @@ export default function Compras() {
       </div>
 
       <Card className="mt-4 p-0 overflow-hidden">
-        {loading && <p className="p-6 text-sm text-slate-500">Cargando compras...</p>}
+        {loading && <TableSkeleton />}
         {error && <p className="p-6 text-sm text-danger-600">{error}</p>}
 
         {!loading && !error && comprasFiltradas.length === 0 && (
-          <p className="p-6 text-sm text-slate-500">
-            {compras.length === 0
-              ? "Todavía no hay compras. Crea una nueva."
-              : "Ninguna compra coincide con la búsqueda."}
-          </p>
+          <EmptyState
+            title={compras.length === 0 ? "Todavía no hay compras" : "Sin resultados"}
+            description={
+              compras.length === 0
+                ? "Registrá una compra nueva para empezar."
+                : "Ninguna compra coincide con la búsqueda."
+            }
+          />
         )}
 
         {/* Móvil: tarjetas apiladas. */}

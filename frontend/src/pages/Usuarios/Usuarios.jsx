@@ -4,6 +4,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { ROLES, ROL_LABEL } from "../../utils/roles";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
+import TableSkeleton from "../../components/ui/TableSkeleton";
 
 const INPUT_CLASS =
   "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500";
@@ -134,7 +135,7 @@ export default function Usuarios() {
       )}
 
       <Card className="mt-6 p-0 overflow-hidden">
-        {loading && <p className="p-6 text-sm text-slate-500">Cargando usuarios...</p>}
+        {loading && <TableSkeleton rows={4} />}
         {error && <p className="p-6 text-sm text-danger-600">{error}</p>}
 
         {/* Móvil: tarjetas apiladas con el selector de rol visible. */}

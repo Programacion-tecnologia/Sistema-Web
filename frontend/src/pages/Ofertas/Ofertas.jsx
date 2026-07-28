@@ -11,6 +11,8 @@ import { ROLES } from "../../utils/roles";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
 import FotoProducto from "../../components/Productos/FotoProducto";
+import EmptyState from "../../components/ui/EmptyState";
+import Skeleton from "../../components/ui/Skeleton";
 import { formatearPrecio } from "../../utils/currency";
 import {
   descuentoPct,
@@ -201,14 +203,20 @@ export default function Ofertas() {
       </div>
 
       {error && <p className="mt-4 text-sm text-danger-600">{error}</p>}
-      {loading && <p className="mt-6 text-sm text-slate-500">Cargando ofertas...</p>}
+      {loading && (
+        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-60 rounded-2xl" />
+          ))}
+        </div>
+      )}
 
       {!loading && ofertas.length === 0 && (
-        <Card className="mt-6">
-          <p className="text-sm text-slate-500">
-            No hay productos en oferta ahora mismo.
-            {puedeGestionar && " Creá una promoción para empezar."}
-          </p>
+        <Card className="mt-6 p-0">
+          <EmptyState
+            title="No hay productos en oferta"
+            description={puedeGestionar ? "Creá una promoción para empezar." : "Volvé más tarde para ver las promos."}
+          />
         </Card>
       )}
 
@@ -241,7 +249,7 @@ export default function Ofertas() {
             </Button>
           </div>
           {promociones.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-slate-500">Todavía no creaste ninguna promoción.</p>
+            <EmptyState className="py-10" title="Sin promociones" description="Creá tu primera promoción con el botón de arriba." />
           ) : (
             <div className="divide-y divide-slate-100">
               {promociones.map((promo) => (

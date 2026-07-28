@@ -15,6 +15,8 @@ import { ROLES } from "../../utils/roles";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
 import FotoProducto from "../../components/Productos/FotoProducto";
+import EmptyState from "../../components/ui/EmptyState";
+import TableSkeleton from "../../components/ui/TableSkeleton";
 import { getNivelStock, STOCK_NIVEL_CLASS } from "../../utils/stock";
 import { formatearPrecio } from "../../utils/currency";
 import { normalizarTexto } from "../../utils/normalizar";
@@ -388,15 +390,18 @@ export default function Productos() {
       )}
 
       <Card className="mt-4 p-0 overflow-hidden">
-        {loading && <p className="p-6 text-sm text-slate-500">Cargando productos...</p>}
+        {loading && <TableSkeleton />}
         {error && <p className="p-6 text-sm text-danger-600">{error}</p>}
 
         {!loading && !error && productos.length === 0 && (
-          <p className="p-6 text-sm text-slate-500">
-            {hayFiltrosActivos
-              ? "Ningún producto coincide con los filtros."
-              : "Todavía no hay productos cargados. Crea uno nuevo o importa un Excel."}
-          </p>
+          <EmptyState
+            title={hayFiltrosActivos ? "Sin resultados" : "Todavía no hay productos"}
+            description={
+              hayFiltrosActivos
+                ? "Ningún producto coincide con los filtros."
+                : "Creá un producto nuevo o importá un Excel para empezar."
+            }
+          />
         )}
 
         {/* Móvil: tarjetas apiladas (sin scroll lateral) con toda la info y las

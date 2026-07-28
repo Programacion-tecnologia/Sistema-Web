@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listCotizacionesReservadas } from "../../services/scannerService";
 import Card from "../../components/Card/Card";
+import EmptyState from "../../components/ui/EmptyState";
+import TableSkeleton from "../../components/ui/TableSkeleton";
 
 export default function Scanner() {
   const navigate = useNavigate();
@@ -36,13 +38,14 @@ export default function Scanner() {
       </p>
 
       <Card className="mt-6 p-0 overflow-hidden">
-        {loading && <p className="p-6 text-sm text-slate-500">Cargando cotizaciones...</p>}
+        {loading && <TableSkeleton />}
         {error && <p className="p-6 text-sm text-danger-600">{error}</p>}
 
         {!loading && !error && cotizaciones.length === 0 && (
-          <p className="p-6 text-sm text-slate-500">
-            No hay cotizaciones esperando despacho por el momento.
-          </p>
+          <EmptyState
+            title="No hay pedidos para despachar"
+            description="Cuando una cotización quede reservada, aparece acá para verificar."
+          />
         )}
 
         {/* Móvil: tarjetas apiladas. */}

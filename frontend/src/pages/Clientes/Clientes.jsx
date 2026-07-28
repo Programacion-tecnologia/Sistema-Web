@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { listClientes, listActividadCotizacionesPorCliente } from "../../services/clientesService";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
+import EmptyState from "../../components/ui/EmptyState";
+import TableSkeleton from "../../components/ui/TableSkeleton";
 
 export default function Clientes() {
   const navigate = useNavigate();
@@ -73,15 +75,18 @@ export default function Clientes() {
       </div>
 
       <Card className="mt-4 p-0 overflow-hidden">
-        {loading && <p className="p-6 text-sm text-slate-500">Cargando clientes...</p>}
+        {loading && <TableSkeleton />}
         {error && <p className="p-6 text-sm text-danger-600">{error}</p>}
 
         {!loading && !error && clientesFiltrados.length === 0 && (
-          <p className="p-6 text-sm text-slate-500">
-            {clientes.length === 0
-              ? "Todavía no hay clientes. Crea uno nuevo."
-              : "Ningún cliente coincide con la búsqueda."}
-          </p>
+          <EmptyState
+            title={clientes.length === 0 ? "Todavía no hay clientes" : "Sin resultados"}
+            description={
+              clientes.length === 0
+                ? "Creá un cliente nuevo para empezar."
+                : "Ningún cliente coincide con la búsqueda."
+            }
+          />
         )}
 
         {/* Móvil: tarjetas apiladas. */}

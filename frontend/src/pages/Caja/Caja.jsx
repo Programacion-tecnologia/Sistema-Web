@@ -10,6 +10,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { ROLES } from "../../utils/roles";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
+import EmptyState from "../../components/ui/EmptyState";
 import { formatearPrecio } from "../../utils/currency";
 import { METODOS_PAGO, METODO_PAGO_LABEL } from "../../utils/pagoMetodo";
 
@@ -262,7 +263,7 @@ export default function Caja() {
           <h3 className="text-lg font-semibold text-slate-800">Historial de cajas</h3>
         </div>
         {historial.length === 0 ? (
-          <p className="p-5 text-sm text-slate-500">Todavía no hay sesiones de caja.</p>
+          <EmptyState title="Todavía no hay sesiones de caja" description="Cuando abras y cierres caja, el historial aparece acá." />
         ) : (
           <>
             {/* Móvil: tarjetas apiladas. */}
