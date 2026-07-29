@@ -258,14 +258,14 @@ export default function CotizacionDetalle() {
         </div>
 
         <Card className="mt-6 max-w-2xl">
-          <dl className="grid grid-cols-2 gap-4 text-sm mb-6">
+          <dl className="mb-6 grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border border-slate-100 bg-slate-50/60 p-4 text-sm">
             <div>
-              <dt className="text-slate-500">Cliente</dt>
-              <dd className="font-medium text-slate-800">{cotizacion.cliente?.nombre ?? "—"}</dd>
+              <dt className="text-xs uppercase tracking-wide text-slate-400">Cliente</dt>
+              <dd className="mt-0.5 font-medium text-slate-800">{cotizacion.cliente?.nombre ?? "—"}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">Vendedor</dt>
-              <dd className="font-medium text-slate-800">{cotizacion.vendedor?.nombre ?? "—"}</dd>
+              <dt className="text-xs uppercase tracking-wide text-slate-400">Vendedor</dt>
+              <dd className="mt-0.5 font-medium text-slate-800">{cotizacion.vendedor?.nombre ?? "—"}</dd>
             </div>
           </dl>
 
@@ -310,9 +310,12 @@ export default function CotizacionDetalle() {
             </tbody>
           </table>
 
-          <p className="text-right font-semibold text-slate-800 mb-6">
-            Total: {formatearPrecio(totalActual, cotizacion.moneda)}
-          </p>
+          <div className="mb-6 flex items-center justify-between rounded-lg bg-primary-50 px-4 py-3">
+            <span className="text-sm font-medium text-slate-600">Total</span>
+            <span className="text-xl font-bold text-primary-700 tabular-nums">
+              {formatearPrecio(totalActual, cotizacion.moneda)}
+            </span>
+          </div>
 
           {error && <p className="text-sm text-danger-600 mb-4">{error}</p>}
 

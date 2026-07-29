@@ -403,29 +403,29 @@ export default function CompraDetalle() {
         </div>
 
         <Card className="mt-6 max-w-2xl">
-          <dl className="grid grid-cols-2 gap-4 text-sm mb-6">
+          <dl className="mb-6 grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border border-slate-100 bg-slate-50/60 p-4 text-sm">
             <div>
-              <dt className="text-slate-500">Proveedor</dt>
+              <dt className="text-xs uppercase tracking-wide text-slate-400">Proveedor</dt>
               <dd className="font-medium text-slate-800">{compra.proveedor?.nombre ?? "—"}</dd>
             </div>
             <div>
-              <dt className="text-slate-500">Creada por</dt>
+              <dt className="text-xs uppercase tracking-wide text-slate-400">Creada por</dt>
               <dd className="font-medium text-slate-800">{compra.creador?.nombre ?? "—"}</dd>
             </div>
             {compra.guia_remision && compra.estado !== "pendiente" && (
               <div>
-                <dt className="text-slate-500">Guía de remisión</dt>
+                <dt className="text-xs uppercase tracking-wide text-slate-400">Guía de remisión</dt>
                 <dd className="font-medium text-slate-800">{compra.guia_remision}</dd>
               </div>
             )}
             {compra.estado === "recibida" && (
               <>
                 <div>
-                  <dt className="text-slate-500">Recibida por</dt>
+                  <dt className="text-xs uppercase tracking-wide text-slate-400">Recibida por</dt>
                   <dd className="font-medium text-slate-800">{compra.receptor?.nombre ?? "—"}</dd>
                 </div>
                 <div>
-                  <dt className="text-slate-500">Recibida el</dt>
+                  <dt className="text-xs uppercase tracking-wide text-slate-400">Recibida el</dt>
                   <dd className="font-medium text-slate-800">
                     {compra.recibida_at ? new Date(compra.recibida_at).toLocaleString("es-PE") : "—"}
                   </dd>
@@ -596,15 +596,17 @@ export default function CompraDetalle() {
             </div>
           )}
 
-          <p className="text-right font-semibold text-slate-800 mb-6">
-            Total:{" "}
-            {formatearPrecio(
-              lineasEditables
-                ? lineas.reduce((total, linea) => total + linea.cantidad * linea.costo_unitario, 0)
-                : totalActual,
-              compra.moneda
-            )}
-          </p>
+          <div className="mb-6 flex items-center justify-between rounded-lg bg-primary-50 px-4 py-3">
+            <span className="text-sm font-medium text-slate-600">Total</span>
+            <span className="text-xl font-bold text-primary-700 tabular-nums">
+              {formatearPrecio(
+                lineasEditables
+                  ? lineas.reduce((total, linea) => total + linea.cantidad * linea.costo_unitario, 0)
+                  : totalActual,
+                compra.moneda
+              )}
+            </span>
+          </div>
 
           {error && <p className="text-sm text-danger-600 mb-4">{error}</p>}
 

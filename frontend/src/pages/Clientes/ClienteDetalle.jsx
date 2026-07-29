@@ -4,6 +4,8 @@ import { createCliente, getCliente, getHistorialCliente, updateCliente } from ".
 import { consultarDocumento, FUENTE_LABEL } from "../../services/documentosService";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
+import Field from "../../components/ui/Field";
+import EmptyState from "../../components/ui/EmptyState";
 import { ESTADO_LABEL, ESTADO_BADGE_CLASS } from "../../utils/cotizacionEstado";
 import { formatearPrecio } from "../../utils/currency";
 
@@ -132,39 +134,26 @@ export default function ClienteDetalle() {
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-1 h-fit">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
-              <input value={form.nombre} onChange={handleChange("nombre")} className={INPUT_CLASS} required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">RUC/DNI</label>
+            <Field label="Nombre" required>
+              <input value={form.nombre} onChange={handleChange("nombre")} className={INPUT_CLASS} />
+            </Field>
+            <Field label="RUC/DNI" hint="Consulta SUNAT/RENIEC y autocompleta nombre y dirección.">
               <div className="flex gap-2">
                 <input value={form.ruc_dni} onChange={handleChange("ruc_dni")} className={INPUT_CLASS} />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={consultando}
-                  onClick={handleConsultar}
-                >
+                <Button type="button" variant="secondary" disabled={consultando} onClick={handleConsultar}>
                   {consultando ? "..." : "Consultar"}
                 </Button>
               </div>
-              <p className="mt-1 text-xs text-slate-400">
-                Consulta SUNAT/RENIEC y autocompleta nombre y dirección.
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+            </Field>
+            <Field label="Email">
               <input type="email" value={form.email} onChange={handleChange("email")} className={INPUT_CLASS} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
+            </Field>
+            <Field label="Teléfono">
               <input value={form.telefono} onChange={handleChange("telefono")} className={INPUT_CLASS} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Dirección</label>
+            </Field>
+            <Field label="Dirección">
               <input value={form.direccion} onChange={handleChange("direccion")} className={INPUT_CLASS} />
-            </div>
+            </Field>
 
             {error && <p className="text-sm text-danger-600">{error}</p>}
             {mensaje && <p className="text-sm text-success-700">{mensaje}</p>}
@@ -185,18 +174,18 @@ export default function ClienteDetalle() {
             <Card>
               <dl className="grid grid-cols-3 gap-4 text-sm">
                 <div>
-                  <dt className="text-slate-500">Cliente desde</dt>
-                  <dd className="font-medium text-slate-800">
+                  <dt className="text-xs uppercase tracking-wide text-slate-400">Cliente desde</dt>
+                  <dd className="mt-0.5 font-medium text-slate-800">
                     {clienteDesde ? new Date(clienteDesde).toLocaleDateString("es-PE") : "—"}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-slate-500">Cotizaciones</dt>
-                  <dd className="font-medium text-slate-800">{historial.length}</dd>
+                  <dt className="text-xs uppercase tracking-wide text-slate-400">Cotizaciones</dt>
+                  <dd className="mt-0.5 font-medium text-slate-800">{historial.length}</dd>
                 </div>
                 <div>
-                  <dt className="text-slate-500">Total cotizado</dt>
-                  <dd className="font-medium text-slate-800">
+                  <dt className="text-xs uppercase tracking-wide text-slate-400">Total cotizado</dt>
+                  <dd className="mt-0.5 font-medium text-slate-800">
                     {formatearPrecio(resumenMontos.PEN, "PEN")}
                     {resumenMontos.USD > 0 && (
                       <span className="block">{formatearPrecio(resumenMontos.USD, "USD")}</span>
@@ -209,7 +198,7 @@ export default function ClienteDetalle() {
             <Card>
               <h3 className="text-lg font-semibold text-slate-800 mb-4">Historial de cotizaciones</h3>
               {historial.length === 0 ? (
-                <p className="text-sm text-slate-500">Este cliente todavía no tiene cotizaciones.</p>
+                <EmptyState title="Sin cotizaciones" description="Este cliente todavía no tiene cotizaciones." />
               ) : (
                 <table className="w-full text-sm">
                   <thead className="text-slate-500 text-left">

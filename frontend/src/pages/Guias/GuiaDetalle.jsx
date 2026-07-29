@@ -34,8 +34,8 @@ function Dato({ label, valor }) {
   if (!valor && valor !== 0) return null;
   return (
     <div>
-      <dt className="text-slate-500">{label}</dt>
-      <dd className="font-medium text-slate-800">{valor}</dd>
+      <dt className="text-xs uppercase tracking-wide text-slate-400">{label}</dt>
+      <dd className="mt-0.5 font-medium text-slate-800">{valor}</dd>
     </div>
   );
 }
@@ -97,7 +97,7 @@ export default function GuiaDetalle() {
       </div>
 
       <Card className="mt-6 max-w-3xl">
-        <dl className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border border-slate-100 bg-slate-50/60 p-4 text-sm sm:grid-cols-3">
           <Dato label="Emisión" valor={guia.fecha_emision} />
           <Dato label="Fecha de traslado" valor={guia.fecha_traslado} />
           <Dato label="Motivo" valor={guia.motivo_traslado} />

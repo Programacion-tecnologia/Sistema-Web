@@ -10,6 +10,8 @@ import { useAuth } from "../../hooks/useAuth";
 import { ROLES } from "../../utils/roles";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
+import Field from "../../components/ui/Field";
+import EmptyState from "../../components/ui/EmptyState";
 import { ESTADO_LABEL, ESTADO_BADGE_CLASS } from "../../utils/compraEstado";
 import { formatearPrecio } from "../../utils/currency";
 
@@ -129,35 +131,28 @@ export default function ProveedorDetalle() {
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-1 h-fit">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <fieldset disabled={!puedeEscribir} className="contents">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Razón social</label>
-                <input value={form.nombre} onChange={handleChange("nombre")} className={INPUT_CLASS} required />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">RUC</label>
+            <fieldset disabled={!puedeEscribir} className="space-y-4">
+              <Field label="Razón social" required>
+                <input value={form.nombre} onChange={handleChange("nombre")} className={INPUT_CLASS} />
+              </Field>
+              <Field label="RUC">
                 <input value={form.ruc} onChange={handleChange("ruc")} className={INPUT_CLASS} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Contacto</label>
+              </Field>
+              <Field label="Contacto">
                 <input value={form.contacto} onChange={handleChange("contacto")} className={INPUT_CLASS} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
+              </Field>
+              <Field label="Teléfono">
                 <input value={form.telefono} onChange={handleChange("telefono")} className={INPUT_CLASS} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+              </Field>
+              <Field label="Email">
                 <input type="email" value={form.email} onChange={handleChange("email")} className={INPUT_CLASS} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Dirección</label>
+              </Field>
+              <Field label="Dirección">
                 <input value={form.direccion} onChange={handleChange("direccion")} className={INPUT_CLASS} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Notas</label>
+              </Field>
+              <Field label="Notas">
                 <textarea value={form.notas} onChange={handleChange("notas")} rows={3} className={INPUT_CLASS} />
-              </div>
+              </Field>
             </fieldset>
 
             {error && <p className="text-sm text-danger-600">{error}</p>}
@@ -186,18 +181,18 @@ export default function ProveedorDetalle() {
             <Card>
               <dl className="grid grid-cols-3 gap-4 text-sm">
                 <div>
-                  <dt className="text-slate-500">Proveedor desde</dt>
-                  <dd className="font-medium text-slate-800">
+                  <dt className="text-xs uppercase tracking-wide text-slate-400">Proveedor desde</dt>
+                  <dd className="mt-0.5 font-medium text-slate-800">
                     {proveedorDesde ? new Date(proveedorDesde).toLocaleDateString("es-PE") : "—"}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-slate-500">Compras</dt>
-                  <dd className="font-medium text-slate-800">{historial.length}</dd>
+                  <dt className="text-xs uppercase tracking-wide text-slate-400">Compras</dt>
+                  <dd className="mt-0.5 font-medium text-slate-800">{historial.length}</dd>
                 </div>
                 <div>
-                  <dt className="text-slate-500">Total comprado</dt>
-                  <dd className="font-medium text-slate-800">
+                  <dt className="text-xs uppercase tracking-wide text-slate-400">Total comprado</dt>
+                  <dd className="mt-0.5 font-medium text-slate-800">
                     {formatearPrecio(resumenMontos.PEN, "PEN")}
                     {resumenMontos.USD > 0 && (
                       <span className="block">{formatearPrecio(resumenMontos.USD, "USD")}</span>
@@ -210,7 +205,7 @@ export default function ProveedorDetalle() {
             <Card>
               <h3 className="text-lg font-semibold text-slate-800 mb-4">Historial de compras</h3>
               {historial.length === 0 ? (
-                <p className="text-sm text-slate-500">Este proveedor todavía no tiene compras registradas.</p>
+                <EmptyState title="Sin compras" description="Este proveedor todavía no tiene compras registradas." />
               ) : (
                 <table className="w-full text-sm">
                   <thead className="text-slate-500 text-left">
