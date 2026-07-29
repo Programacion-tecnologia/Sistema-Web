@@ -137,7 +137,9 @@ export default function VentaDetalle() {
   return (
     <>
       <div className="flex items-center gap-3 flex-wrap">
-        <h2 className="text-3xl font-bold">Venta</h2>
+        <h2 className="text-2xl font-bold sm:text-3xl">
+          Venta <span className="font-semibold text-slate-400">N° {venta.id.slice(0, 8).toUpperCase()}</span>
+        </h2>
         <span
           className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
             venta.estado === "anulada"
@@ -150,28 +152,28 @@ export default function VentaDetalle() {
       </div>
 
       <Card className="mt-6 max-w-2xl">
-        <dl className="grid grid-cols-2 gap-4 text-sm mb-6">
+        <dl className="mb-6 grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border border-slate-100 bg-slate-50/60 p-4 text-sm">
           <div>
-            <dt className="text-slate-500">Fecha</dt>
-            <dd className="font-medium text-slate-800">
+            <dt className="text-xs uppercase tracking-wide text-slate-400">Fecha</dt>
+            <dd className="mt-0.5 font-medium text-slate-800">
               {new Date(venta.created_at).toLocaleString("es-PE")}
             </dd>
           </div>
           <div>
-            <dt className="text-slate-500">Vendedor</dt>
-            <dd className="font-medium text-slate-800">{venta.vendedor?.nombre ?? "—"}</dd>
+            <dt className="text-xs uppercase tracking-wide text-slate-400">Vendedor</dt>
+            <dd className="mt-0.5 font-medium text-slate-800">{venta.vendedor?.nombre ?? "—"}</dd>
           </div>
           <div>
-            <dt className="text-slate-500">Cliente</dt>
-            <dd className="font-medium text-slate-800">
+            <dt className="text-xs uppercase tracking-wide text-slate-400">Cliente</dt>
+            <dd className="mt-0.5 font-medium text-slate-800">
               {venta.cliente?.nombre ?? "Público general"}
               {venta.cliente?.ruc_dni ? ` · ${venta.cliente.ruc_dni}` : ""}
             </dd>
           </div>
           {venta.estado === "anulada" && (
             <div>
-              <dt className="text-slate-500">Anulada</dt>
-              <dd className="font-medium text-slate-800">
+              <dt className="text-xs uppercase tracking-wide text-slate-400">Anulada</dt>
+              <dd className="mt-0.5 font-medium text-slate-800">
                 {venta.anulador?.nombre ?? "—"} — {venta.motivo_anulacion}
               </dd>
             </div>
@@ -229,9 +231,12 @@ export default function VentaDetalle() {
           </tbody>
         </table>
 
-        <p className="text-right font-semibold text-slate-800 mb-4">
-          Total: {formatearPrecio(total, venta.moneda)}
-        </p>
+        <div className="mb-4 flex items-center justify-between rounded-lg bg-primary-50 px-4 py-3">
+          <span className="text-sm font-medium text-slate-600">Total</span>
+          <span className="text-xl font-bold text-primary-700 tabular-nums">
+            {formatearPrecio(total, venta.moneda)}
+          </span>
+        </div>
 
         <div className="border-t border-slate-100 pt-3 mb-6">
           <p className="text-sm font-medium text-slate-700 mb-1">Pagos</p>

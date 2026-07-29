@@ -13,12 +13,35 @@ import { useAuth } from "../../hooks/useAuth";
 import { ROLES } from "../../utils/roles";
 import Card from "../../components/Card/Card";
 import Button from "../../components/Button/Button";
+import Field from "../../components/ui/Field";
+import FormSection from "../../components/ui/FormSection";
 import FotoProducto from "../../components/Productos/FotoProducto";
 
 const PUEDE_ESCRIBIR_PRODUCTOS = [ROLES.ADMIN, ROLES.GERENCIA];
 
 const INPUT_CLASS =
   "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500";
+
+// Input de precio con el símbolo de la moneda adentro (S/ o $), alineado a la
+// derecha para que los montos se lean como cifras.
+function MoneyInput({ value, onChange, moneda }) {
+  const simbolo = moneda === "USD" ? "$" : "S/";
+  return (
+    <div className="relative">
+      <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm text-slate-400">
+        {simbolo}
+      </span>
+      <input
+        type="number"
+        step="0.01"
+        min="0"
+        value={value}
+        onChange={onChange}
+        className={`${INPUT_CLASS} pl-9 text-right tabular-nums`}
+      />
+    </div>
+  );
+}
 
 const FORM_INICIAL = {
   codigo_barras: "",
@@ -56,6 +79,7 @@ export default function ProductoDetalle() {
   const [error, setError] = useState(null);
   const [fotoError, setFotoError] = useState(null);
   const [mensaje, setMensaje] = useState(null);
+  const [errores, setErrores] = useState({});
   const [tipoCambioSugerido, setTipoCambioSugerido] = useState(null);
   const [proveedoresProducto, setProveedoresProducto] = useState([]);
 
@@ -116,6 +140,8 @@ export default function ProductoDetalle() {
 
   const handleChange = (campo) => (event) => {
     setForm((prev) => ({ ...prev, [campo]: event.target.value }));
+    // Al escribir, limpia el error de ese campo (si lo tenía).
+    setErrores((prev) => (prev[campo] ? { ...prev, [campo]: undefined } : prev));
   };
 
   const usarTipoCambioSugerido = () => {
@@ -125,6 +151,16 @@ export default function ProductoDetalle() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    // Validación por campo (se muestra debajo del campo que falla).
+    const errs = {};
+    if (!form.nombre.trim()) errs.nombre = "El nombre es obligatorio.";
+    if (Object.keys(errs).length > 0) {
+      setErrores(errs);
+      return;
+    }
+    setErrores({});
+
     setSaving(true);
     setError(null);
     setMensaje(null);
@@ -196,205 +232,156 @@ export default function ProductoDetalle() {
 
   return (
     <>
-      <h2 className="text-3xl font-bold">
+      <h2 className="text-2xl font-bold sm:text-3xl">
         {modoEdicion ? (puedeEscribir ? "Editar producto" : "Producto") : "Nuevo producto"}
       </h2>
 
       <div className="mt-6 flex flex-col lg:flex-row gap-6 items-start">
         <Card className="w-full lg:max-w-2xl">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <fieldset disabled={!puedeEscribir} className="contents">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nombre</label>
-                <input
-                  required
-                  value={form.nombre}
-                  onChange={handleChange("nombre")}
-                  className={INPUT_CLASS}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Código de referencia
-                </label>
-                <input
-                  value={form.codigo_referencia}
-                  onChange={handleChange("codigo_referencia")}
-                  className={INPUT_CLASS}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Código de barras
-                </label>
-                <input
-                  value={form.codigo_barras}
-                  onChange={handleChange("codigo_barras")}
-                  className={INPUT_CLASS}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Categoría</label>
-                <input
-                  list="categorias-existentes"
-                  value={categoriaNombre}
-                  onChange={(event) => setCategoriaNombre(event.target.value)}
-                  className={INPUT_CLASS}
-                />
-                <datalist id="categorias-existentes">
-                  {categorias.map((categoria) => (
-                    <option key={categoria.id} value={categoria.nombre} />
-                  ))}
-                </datalist>
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Descripción
-                </label>
-                <textarea
-                  value={form.descripcion}
-                  onChange={handleChange("descripcion")}
-                  rows={2}
-                  className={INPUT_CLASS}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
-                <select value={form.estado} onChange={handleChange("estado")} className={INPUT_CLASS}>
-                  <option value="activo">Activo</option>
-                  <option value="inactivo">Inactivo</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Color</label>
-                <input value={form.color} onChange={handleChange("color")} className={INPUT_CLASS} />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Modelo</label>
-                <input value={form.modelo} onChange={handleChange("modelo")} className={INPUT_CLASS} />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Unidad (Um: PIEZA, PAR, JUEGO...)
-                </label>
-                <input value={form.unidad} onChange={handleChange("unidad")} className={INPUT_CLASS} />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Moneda</label>
-                <select value={form.moneda} onChange={handleChange("moneda")} className={INPUT_CLASS}>
-                  <option value="PEN">Soles (PEN)</option>
-                  <option value="USD">Dólares (USD)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Tipo de cambio
-                </label>
-                <input
-                  type="number"
-                  step="0.0001"
-                  min="0"
-                  value={form.tipo_cambio}
-                  onChange={handleChange("tipo_cambio")}
-                  className={INPUT_CLASS}
-                />
-                {tipoCambioSugerido && (
-                  <p className="mt-1 text-xs text-slate-500">
-                    Sugerido (referencial, no oficial): {tipoCambioSugerido.valor.toFixed(4)}{" "}
-                    <button
-                      type="button"
-                      onClick={usarTipoCambioSugerido}
-                      className="text-primary-600 hover:underline"
-                    >
-                      Usar este valor
-                    </button>
-                  </p>
-                )}
-              </div>
-
-              {puedeEscribir && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Precio de compra
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={form.precio_compra}
-                    onChange={handleChange("precio_compra")}
-                    className={INPUT_CLASS}
-                  />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <fieldset disabled={!puedeEscribir} className="min-w-0 space-y-6">
+              <FormSection title="Identificación">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field label="Nombre" required error={errores.nombre} className="sm:col-span-2">
+                    <input value={form.nombre} onChange={handleChange("nombre")} className={INPUT_CLASS} />
+                  </Field>
+                  <Field label="Código de referencia">
+                    <input
+                      value={form.codigo_referencia}
+                      onChange={handleChange("codigo_referencia")}
+                      className={INPUT_CLASS}
+                    />
+                  </Field>
+                  <Field label="Código de barras">
+                    <input
+                      value={form.codigo_barras}
+                      onChange={handleChange("codigo_barras")}
+                      className={INPUT_CLASS}
+                    />
+                  </Field>
+                  <Field label="Categoría / Marca" className="sm:col-span-2">
+                    <input
+                      list="categorias-existentes"
+                      value={categoriaNombre}
+                      onChange={(event) => setCategoriaNombre(event.target.value)}
+                      className={INPUT_CLASS}
+                    />
+                    <datalist id="categorias-existentes">
+                      {categorias.map((categoria) => (
+                        <option key={categoria.id} value={categoria.nombre} />
+                      ))}
+                    </datalist>
+                  </Field>
                 </div>
-              )}
+              </FormSection>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Precio de venta
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={form.precio_venta}
-                  onChange={handleChange("precio_venta")}
-                  className={INPUT_CLASS}
-                />
-              </div>
+              <FormSection title="Detalles">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field label="Descripción" className="sm:col-span-2">
+                    <textarea
+                      value={form.descripcion}
+                      onChange={handleChange("descripcion")}
+                      rows={2}
+                      className={INPUT_CLASS}
+                    />
+                  </Field>
+                  <Field label="Color">
+                    <input value={form.color} onChange={handleChange("color")} className={INPUT_CLASS} />
+                  </Field>
+                  <Field label="Modelo">
+                    <input value={form.modelo} onChange={handleChange("modelo")} className={INPUT_CLASS} />
+                  </Field>
+                  <Field label="Unidad" hint="Um: PIEZA, PAR, JUEGO...">
+                    <input value={form.unidad} onChange={handleChange("unidad")} className={INPUT_CLASS} />
+                  </Field>
+                  <Field label="Estado">
+                    <select value={form.estado} onChange={handleChange("estado")} className={INPUT_CLASS}>
+                      <option value="activo">Activo</option>
+                      <option value="inactivo">Inactivo</option>
+                    </select>
+                  </Field>
+                </div>
+              </FormSection>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Precio mayorista
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={form.precio_mayorista}
-                  onChange={handleChange("precio_mayorista")}
-                  className={INPUT_CLASS}
-                />
-              </div>
+              <FormSection title="Precios">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field label="Moneda">
+                    <select value={form.moneda} onChange={handleChange("moneda")} className={INPUT_CLASS}>
+                      <option value="PEN">Soles (PEN)</option>
+                      <option value="USD">Dólares (USD)</option>
+                    </select>
+                  </Field>
+                  <Field label="Tipo de cambio">
+                    <input
+                      type="number"
+                      step="0.0001"
+                      min="0"
+                      value={form.tipo_cambio}
+                      onChange={handleChange("tipo_cambio")}
+                      className={INPUT_CLASS}
+                    />
+                    {tipoCambioSugerido && (
+                      <p className="mt-1 text-xs text-slate-500">
+                        Sugerido (referencial): {tipoCambioSugerido.valor.toFixed(4)}{" "}
+                        <button
+                          type="button"
+                          onClick={usarTipoCambioSugerido}
+                          className="text-primary-600 hover:underline"
+                        >
+                          Usar
+                        </button>
+                      </p>
+                    )}
+                  </Field>
+                  {puedeEscribir && (
+                    <Field label="Precio de compra">
+                      <MoneyInput
+                        value={form.precio_compra}
+                        onChange={handleChange("precio_compra")}
+                        moneda={form.moneda}
+                      />
+                    </Field>
+                  )}
+                  <Field label="Precio de venta">
+                    <MoneyInput
+                      value={form.precio_venta}
+                      onChange={handleChange("precio_venta")}
+                      moneda={form.moneda}
+                    />
+                  </Field>
+                  <Field label="Precio mayorista">
+                    <MoneyInput
+                      value={form.precio_mayorista}
+                      onChange={handleChange("precio_mayorista")}
+                      moneda={form.moneda}
+                    />
+                  </Field>
+                </div>
+              </FormSection>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Stock físico
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={form.stock_fisico}
-                  onChange={handleChange("stock_fisico")}
-                  className={INPUT_CLASS}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Ubicación</label>
-                <input
-                  value={form.ubicacion}
-                  onChange={handleChange("ubicacion")}
-                  className={INPUT_CLASS}
-                />
-              </div>
-            </div>
+              <FormSection title="Stock">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field label="Stock físico">
+                    <input
+                      type="number"
+                      min="0"
+                      value={form.stock_fisico}
+                      onChange={handleChange("stock_fisico")}
+                      className={INPUT_CLASS}
+                    />
+                  </Field>
+                  <Field label="Ubicación">
+                    <input value={form.ubicacion} onChange={handleChange("ubicacion")} className={INPUT_CLASS} />
+                  </Field>
+                </div>
+              </FormSection>
             </fieldset>
 
             {error && <p className="text-sm text-danger-600">{error}</p>}
             {mensaje && <p className="text-sm text-success-600">{mensaje}</p>}
 
-            <div className="flex items-center gap-3">
+            {/* Barra de acción fija: Guardar/Cancelar siempre visibles al pie. */}
+            <div className="sticky bottom-0 -mx-6 -mb-6 flex items-center gap-3 border-t border-slate-100 bg-white/95 px-6 py-4 backdrop-blur">
               {puedeEscribir && (
                 <Button type="submit" disabled={saving}>
                   {saving ? "Guardando..." : "Guardar"}
